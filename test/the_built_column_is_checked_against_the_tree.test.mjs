@@ -137,12 +137,16 @@ describe('a claim the tree holds, and a claim it refutes, are different verdicts
 
 	it('says no name of a project this page is not about', () => {
 		const the_answer = what_the_built_column_says(the_four_refusals, the_found_reader());
-		for (const a_claim of the_answer.the_refuted_claims) {
-			ok(
-				!['StateMachineError', 'CitedFileNotFoundError', 'NoDockerError'].includes(a_claim.name),
-				`${a_claim.name} belongs to the project this page is about, so the reader is not reading the tree it was given`,
-			);
-		}
+		ok(
+			the_answer.the_refused_claims.length > 0,
+			'there is nothing to check, so a test that finds nothing to check passes',
+		);
+		ok(
+			the_answer.the_refused_claims.every(
+				(a_claim) => !['StateMachineError', 'CitedFileNotFoundError', 'NoDockerError'].includes(a_claim.name),
+			),
+			'a name from the project this page is about is in the answer, so the reader is not reading the tree it was given',
+		);
 	});
 });
 
