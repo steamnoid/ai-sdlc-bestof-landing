@@ -71,7 +71,15 @@ export function what_is_on_disk(inside, the_layers) {
 		if (!is_a_directory(the_directory)) {
 			return { name: a_layer.name, is_a_directory: false, how_many_files: null, how_many_modules: null };
 		}
-		const the_files = readdirSync(the_directory).filter((a_name) => a_name !== '__pycache__');
+		// **A subdirectory is not a file, and the project has one.** `web/` holds a `ui/`
+		// and no code, and a reader that counted entries rather than files reported a layer
+		// with a module in it — which is the whole mistake this table exists to avoid, made
+		// in the column that exists to prevent it. `__pycache__` is dropped for the same
+		// reason it is not a module: it is something a build left, not something a project
+		// wrote, and a layer whose only content is bytecode is a layer nobody has worked on.
+		const the_files = readdirSync(the_directory).filter(
+			(a_name) => a_name !== '__pycache__' && !is_a_directory(join(the_directory, a_name)),
+		);
 		return {
 			name: a_layer.name,
 			is_a_directory: true,
