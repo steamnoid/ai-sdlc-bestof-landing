@@ -27,6 +27,8 @@
  */
 
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { dirname } from 'node:path';
 
 import { ask_a_python_reader, the_interpreter_to_read_the_code_with } from './ask_a_python_reader.mjs';
@@ -166,4 +168,69 @@ export function write_the_state(the_state, where) {
 	// **Tab-indented, with a trailing newline.** This file is published beside the page for
 	// anybody to check a number against, and a diff of it is something a person reads.
 	writeFileSync(where, `${JSON.stringify(the_state, null, '\t')}\n`);
+}
+
+/** What to read, from the command line. */
+function the_flags_in(process_arguments) {
+	const the_flags = {};
+	for (let at = 0; at < process_arguments.length; at += 1) {
+		const a_flag = process_arguments[at];
+		if (!a_flag.startsWith('--')) continue;
+		// **A flag with nothing after it is a switch and not a flag with no value.**
+		const the_next = process_arguments[at + 1];
+		const the_value = the_next === undefined || the_next.startsWith('--') ? true : the_next;
+		the_flags[a_flag.slice(2).replace(/-/g, '_')] = the_value;
+		if (the_value === true) continue;
+		at += 1;
+	}
+	return the_flags;
+}
+
+/** Read the project, write the state, and refuse by name when it could not be read. */
+async function the_command_line() {
+	const the_flags = the_flags_in(process.argv.slice(2));
+	if (the_flags.help === true) {
+		process.stdout.write(
+			'usage: ask_the_repository.mjs --repository <path> [--out <path>] [--owner <name>]\n' +
+				'                              [--name <name>] [--this-page <name>] [--github-api <url>]\n' +
+				'                              [--run-the-suite] [--help]\n',
+		);
+		return 0;
+	}
+	if (the_flags.repository === undefined || the_flags.repository === true) {
+		process.stderr.write('nothing was asked for: pass --repository <path>.\n');
+		return 2;
+	}
+	try {
+		const the_state = await collect_everything_about(the_flags.repository, {
+			owner: the_flags.owner ?? 'steamnoid',
+			name: the_flags.name ?? 'ai-sdlc-bestof',
+			this_page: the_flags.this_page ?? 'ai-sdlc-bestof-landing',
+			was_the_suite_asked_for: the_flags.run_the_suite === true ? '--run-the-suite' : null,
+			github_api:
+				the_flags.github_api && the_flags.github_api !== true ? the_flags.github_api : null,
+		});
+		write_the_state(the_state, the_flags.out ?? 'src/state/the_bestof.json');
+		process.stderr.write(`wrote the state of ${the_flags.repository}\n`);
+		return 0;
+	} catch (the_refusal) {
+		// **The reader's own words, and nothing on disk.** A state file that is half an answer
+		// can be built from, and a page built from one cannot say which half it has.
+		process.stderr.write(`${the_refusal.name}: ${the_refusal.message}\n`);
+		process.stderr.write('no state was written, because a half-answer looks like an answer.\n');
+		return 1;
+	}
+}
+
+/**
+ * Whether this file was *run* rather than imported — see the same function in
+ * `has_anything_changed.mjs`, where the reason is written out in full.
+ */
+export function the_file_was_run(as) {
+	if (as[1] === undefined) return false;
+	return import.meta.url === pathToFileURL(resolve(as[1])).href;
+}
+
+if (the_file_was_run(process.argv)) {
+	process.exitCode = await the_command_line();
 }

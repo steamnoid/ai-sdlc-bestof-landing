@@ -26,7 +26,9 @@
  * nobody declared skips itself on every run while the run reports success.
  */
 
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { what_differs_between } from './compare_the_states.mjs';
 
@@ -93,3 +95,59 @@ export async function say_the_answer_on_the_command_line(what_was_asked_for) {
 }
 
 export { WHAT_IS_PUBLISHED_HERE };
+
+/** Read the flags, and answer on the command line for whoever is running the build. */
+async function the_command_line() {
+	const the_arguments = process.argv.slice(2);
+	const the_flags = {};
+	for (let at = 0; at < the_arguments.length; at += 1) {
+		if (!the_arguments[at].startsWith('--')) continue;
+		// **A flag with nothing after it is a switch, and not a flag whose value is
+		// `undefined`.** The first version used `the_arguments[at + 1]?.startsWith('--')`, and
+		// a trailing flag produced `undefined` — so `--help` was never `true`, the usage was
+		// never printed, and the flag fell through to the branch meant for a missing argument.
+		const the_next = the_arguments[at + 1];
+		const a_value = the_next === undefined || the_next.startsWith('--') ? true : the_next;
+		the_flags[the_arguments[at].slice(2).replace(/-/g, '_')] = a_value;
+		if (a_value === true) continue;
+		at += 1;
+	}
+	if (the_flags.help === true) {
+		process.stdout.write('usage: has_anything_changed.mjs --state <path> [--published-at <url>]\n');
+		return 0;
+	}
+	if (the_flags.state === undefined || the_flags.state === true) {
+		// **Nothing to compare, and the answer is to refuse.** A skipped build with no state is
+		// a green run that published nothing, which is the failure this whole mechanism exists
+		// to avoid — so the absence of an argument is an error and not a skip.
+		process.stderr.write('nothing was asked for: pass --state <path>.\n');
+		return 2;
+	}
+	await say_the_answer_on_the_command_line({
+		the_state: JSON.parse(readFileSync(the_flags.state, 'utf8')),
+		the_published_site:
+			the_flags.published_at && the_flags.published_at !== true
+				? the_flags.published_at
+				: WHAT_IS_PUBLISHED_HERE,
+	});
+	return 0;
+}
+
+/**
+ * Whether this file was *run* rather than imported.
+ *
+ * **A relative path on the command line and an absolute URL in the import are different
+ * strings**, and a guard comparing them writes a script that does nothing and exits zero. That
+ * is not a hypothetical: this repository shipped exactly that, the workflow called a script
+ * that printed nothing, `has_changed` was never written, and the run was **green having
+ * published nothing** — the precise failure this script exists to prevent, caused by the
+ * script.
+ */
+export function the_file_was_run(as) {
+	if (as[1] === undefined) return false;
+	return import.meta.url === pathToFileURL(resolve(as[1])).href;
+}
+
+if (the_file_was_run(process.argv)) {
+	process.exitCode = await the_command_line();
+}
