@@ -37,7 +37,7 @@ import { describe, it } from 'node:test';
 import { where_a_name_is_declared } from '../scripts/read_where_a_name_is_declared.mjs';
 import { what_the_built_column_says } from '../src/page/what_the_built_column_says.mjs';
 
-const the_project = resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'a_project_that_declares_its_layers');
+const the_project = resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'a_small_project');
 
 /** What the reader found, for the four refusals the fixture's glossary publishes. */
 const what_was_found = (a_name) => where_a_name_is_declared(the_project, a_name).the_files_that_declare_it;

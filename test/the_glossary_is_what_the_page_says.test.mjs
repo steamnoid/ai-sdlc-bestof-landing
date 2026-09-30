@@ -34,7 +34,7 @@ import { describe, it } from 'node:test';
 
 import { read_the_glossary } from '../scripts/read_the_glossary.mjs';
 
-const the_project = resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'a_project_that_declares_its_layers');
+const the_project = resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'a_small_project');
 
 describe('the glossary, read by the rules it states about itself', () => {
 	it('reports how the file says it is to be read, and reports it from the file', () => {

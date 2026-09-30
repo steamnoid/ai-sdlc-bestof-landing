@@ -18,7 +18,7 @@
  * | a layer declared and absent | an absent layer, which is a fact and not a zero |
  *
  * The one shape a fixture has to contain: a layer the docstring names and the tree does not
- * hold. `a_project_that_declares_its_layers` has one, and without it this file could not
+ * hold. `a_small_project` has one, and without it this file could not
  * tell a declaration from a directory.
  *
  * Nothing here reads the project the page is about. A test that needs a checkout beside this
@@ -42,7 +42,7 @@ const the_reader = resolve('scripts/ask_the_layers.py');
 const the_project = resolve(
 	dirname(fileURLToPath(import.meta.url)),
 	'fixtures',
-	'a_project_that_declares_its_layers',
+	'a_small_project',
 );
 
 /** Ask the Python reader for a tree, and hand back what it printed. */

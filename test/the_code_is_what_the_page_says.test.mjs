@@ -39,7 +39,7 @@ const the_reader = resolve('scripts/ask_the_code.py');
 const the_project = resolve(
 	dirname(fileURLToPath(import.meta.url)),
 	'fixtures',
-	'a_project_that_declares_its_layers',
+	'a_small_project',
 );
 
 const ask_about = (at) =>
