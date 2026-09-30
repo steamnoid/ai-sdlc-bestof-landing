@@ -40,7 +40,6 @@ const the_reader = resolve('scripts/ask_the_layers.py');
 
 const the_project = resolve(
 	dirname(fileURLToPath(import.meta.url)),
-	'..',
 	'fixtures',
 	'a_project_that_declares_its_layers',
 );
@@ -137,9 +136,17 @@ describe('a package that does not declare its layers is refused, not counted', (
 });
 
 describe('what is on disk in each declared layer', () => {
+	/**
+	 * The tree reader answers about the layers the docstring declared, so it is handed them.
+	 *
+	 * **It is not handed a tree to go and find them itself.** That would be the two
+	 * questions answering each other: a reader that read the docstring to decide what to
+	 * count cannot report a disagreement between the two, because it already merged them.
+	 */
+	const the_tree = () => what_is_on_disk(the_project, ask_about(the_project).the_layers);
+
 	it('says a declared layer that is not there is absent, and not a layer holding nothing', () => {
-		const the_tree = what_is_on_disk(the_project);
-		const the_web = the_tree.find((a_layer) => a_layer.name === 'web');
+		const the_web = the_tree().find((a_layer) => a_layer.name === 'web');
 		ok(the_web, 'a layer the docstring declares is missing from the answer, so the reader dropped it');
 		strictEqual(
 			the_web.is_a_directory,
@@ -149,8 +156,8 @@ describe('what is on disk in each declared layer', () => {
 	});
 
 	it('counts files and modules apart, because a package directory holding only its own init is not a layer with code in it', () => {
-		const the_tree = what_is_on_disk(the_project);
-		const the_store = the_tree.find((a_layer) => a_layer.name === 'store');
+		const the_layers = the_tree();
+		const the_store = the_layers.find((a_layer) => a_layer.name === 'store');
 		strictEqual(the_store.how_many_files, 2, 'the store layer holds an init and one module');
 		strictEqual(
 			the_store.how_many_modules,
@@ -158,7 +165,7 @@ describe('what is on disk in each declared layer', () => {
 			'the store layer holds one module, and a reader counting the init as one reports a layer with two modules in it',
 		);
 		strictEqual(
-			the_tree.find((a_layer) => a_layer.name === 'llm').how_many_modules,
+			the_layers.find((a_layer) => a_layer.name === 'llm').how_many_modules,
 			0,
 			'the llm layer holds only its init, and that is a directory and nothing else',
 		);
@@ -166,7 +173,7 @@ describe('what is on disk in each declared layer', () => {
 
 	it('answers every layer the docstring declared, including the one with no directory', () => {
 		deepStrictEqual(
-			what_is_on_disk(the_project).map((a_layer) => a_layer.name),
+			the_tree().map((a_layer) => a_layer.name),
 			['domain', 'store', 'llm', 'web'],
 			'the tree answer is not the declared list, so the two columns of the page cannot be lined up',
 		);
@@ -175,7 +182,7 @@ describe('what is on disk in each declared layer', () => {
 	it('refuses a package that is not on disk, by name', () => {
 		let the_refusal = null;
 		try {
-			what_is_on_disk(resolve('test', 'fixtures', 'a_project_that_is_not_here'));
+			what_is_on_disk(resolve('test', 'fixtures', 'a_project_that_is_not_here'), []);
 		} catch (the_error) {
 			the_refusal = the_error;
 		}
