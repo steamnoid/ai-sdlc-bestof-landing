@@ -485,10 +485,12 @@ const a_yes_or_a_no = (a_boolean) => (a_boolean ? 'yes' : 'no');
 			</section>
 
 			<!-- The page is rebuilt on a schedule and on every push, so what it says about
-			     freshness is the time it read the project — never a promise about when. A
-			     sibling page said "every hour" for a day and was wrong for most of it: GitHub
-			     documents `schedule` as best-effort, and it was measured here at 3.4 hours,
-			     then 6.1, then not at all. -->
+			     freshness is the time it read the project — never a promise about when. GitHub
+			     documents `schedule` as best-effort, and a sibling page that said "every hour"
+			     was wrong for most of a day: its owner measured the runs arriving 3.4 hours
+			     apart, then 6.1, then not at all, while the project it described was taking
+			     three commits an hour. **That is the sibling's measurement and not this page's**
+			     — this page says when it read, and nothing about when it will. -->
 			<section id="history" class="scroll-mt-14 border-y border-zinc-200 bg-white py-12 md:py-16">
 				<div class="mx-auto max-w-6xl px-6">
 					<div class="flex flex-wrap items-baseline justify-between gap-3">
@@ -509,8 +511,7 @@ const a_yes_or_a_no = (a_boolean) => (a_boolean ? 'yes' : 'no');
 									<span class="font-mono text-zinc-900">git log</span>. The page counts that
 									pairing and draws no verdict on it — the project squash-merges whole cycles,
 									and whether a squash satisfies the rule is a judgement about a project.
-								</p>
-								<div class="mt-5 grid gap-3 sm:grid-cols-3">
+								</p>								<div class="mt-5 grid gap-3 sm:grid-cols-3">
 									<div class="rounded-xl border border-zinc-200 p-4">
 										<dt class="text-[11px] tracking-wider text-zinc-500 uppercase">Saying they are RED</dt>
 										<dd class="mt-1.5 text-2xl font-semibold tabular-nums">
