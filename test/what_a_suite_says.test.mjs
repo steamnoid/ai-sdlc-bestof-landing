@@ -154,6 +154,25 @@ describe('a count the runner never printed is not a count of zero', () => {
 			'nothing was captured, so a page would show an empty terminal for a suite that printed a great deal',
 		);
 	});
+
+	it('names the reason when a suite printed nothing at all, because a bare exit code explains nothing', () => {
+		// **The case the published page got wrong.** On its first CI run the suite came back
+		// with exit code 1 and no output whatsoever — a runner that never started — and the
+		// page printed *"the suite exited 1"* above an empty terminal, which is a page that has
+		// thrown away the only fact it had. `execFileSync` carries the reason in the failure's
+		// own message when the process never ran, and a reader that reads only `stdout` and
+		// `stderr` loses it entirely.
+		const the_answer = read_the_suite('/tmp', {
+			was_it_asked_for: '--run-the-suite',
+			how_to_run_it: '/no/such/interpreter',
+		});
+		strictEqual(the_answer.is_green, false, 'an interpreter that does not exist is a green suite');
+		match(
+			the_answer.why_not,
+			/no\/such\/interpreter|no such file|ENOENT/i,
+			'the reason does not name the interpreter that could not be run, so a reader cannot tell a broken suite from a broken runner',
+		);
+	});
 });
 
 describe('the interpreter is the project\'s own', () => {
