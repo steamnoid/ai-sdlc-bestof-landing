@@ -35,6 +35,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 import { what_is_on_disk } from '../scripts/read_the_layers_on_disk.mjs';
+import { what_the_project_holds } from '../scripts/read_what_the_project_holds.mjs';
 
 const the_reader = resolve('scripts/ask_the_layers.py');
 
@@ -69,11 +70,11 @@ const a_project_that_declares_nothing = () => {
 };
 
 describe('the layers a package declares, read out of its own docstring', () => {
-	it('names all five, in the order the docstring names them', () => {
+	it('names all six, in the order the docstring names them', () => {
 		const the_answer = ask_about(the_project);
 		deepStrictEqual(
 			the_answer.the_layers.map((a_layer) => a_layer.name),
-			['domain', 'store', 'llm', 'web', 'repair'],
+			['domain', 'store', 'llm', 'web', 'creative', 'repair'],
 			'the reader read the docstring in its own order, or answered from a different tree',
 		);
 	});
@@ -204,7 +205,7 @@ describe('what is on disk in each declared layer', () => {
 	it('answers every layer the docstring declared, including the one with no directory', () => {
 		deepStrictEqual(
 			the_tree().map((a_layer) => a_layer.name),
-			['domain', 'store', 'llm', 'web', 'repair'],
+			['domain', 'store', 'llm', 'web', 'creative', 'repair'],
 			'the tree answer is not the declared list, so the two columns of the page cannot be lined up',
 		);
 	});
@@ -224,3 +225,60 @@ describe('what is on disk in each declared layer', () => {
 		);
 	});
 });
+
+describe('what the project holds, which is not what is on disk', () => {
+	it('counts a file git does not hold as held by nobody, while the disk says it is there', () => {
+		// **The fixture's `creative/` has a module on disk and a `.gitignore` that ignores
+		// it.** Both readers are right about it and they disagree, and a page that merged
+		// them would report a layer with code in it that a clone does not have — the exact
+		// shape of "built and never wired", arrived at by an uncommitted file instead of a
+		// whole missing wiring.
+		const the_declared = ask_about(the_project).the_layers;
+		const the_disk = what_is_on_disk(the_project, the_declared);
+		const held = what_the_project_holds(the_project, the_declared);
+
+		const on_disk = the_disk.find((a_layer) => a_layer.name === 'creative');
+		const held_here = held.find((a_layer) => a_layer.name === 'creative');
+		strictEqual(on_disk.how_many_modules, 1, 'the module is on disk, or the fixture is not the fixture');
+		strictEqual(held_here.how_many_modules, 0, 'the module is in the fixture and ignored, so git does not hold it');
+	});
+
+	it('agrees with the disk about a layer the project really does hold', () => {
+		// **The disagreement above is only evidence if the two readers agree where they
+		// should.** A reader that always reports zero would pass the test above and print an
+		// architecture of nothing, so every "is not held" assertion is paired with a
+		// "is held" one — the pairing a comparison that reports nothing always needs.
+		const the_declared = ask_about(the_project).the_layers;
+		const the_disk = what_is_on_disk(the_project, the_declared);
+		const held = what_the_project_holds(the_project, the_declared);
+
+		strictEqual(
+			held.find((a_layer) => a_layer.name === 'store').how_many_modules,
+			the_disk.find((a_layer) => a_layer.name === 'store').how_many_modules,
+			'the two readers disagree about a layer that is committed, so one of them is lying about everything',
+		);
+		ok(
+			held.find((a_layer) => a_layer.name === 'store').how_many_modules > 0,
+			'the store layer is committed and holds a module, and a reader reporting zero here is reading nothing',
+		);
+	});
+
+	it('refuses a directory that is not a checkout, by name', () => {
+		let the_refusal = null;
+		try {
+			what_the_project_holds(
+				mkdtempSync(join(tmpdir(), 'a-directory-without-git-')),
+				ask_about(the_project).the_layers,
+			);
+		} catch (the_error) {
+			the_refusal = the_error;
+		}
+		ok(the_refusal, 'a directory that is not a checkout was counted rather than refused');
+		strictEqual(
+			the_refusal.name,
+			'TheProjectIsNotACheckoutError',
+			'the refusal is not named after the rule it protects',
+		);
+	});
+});
+

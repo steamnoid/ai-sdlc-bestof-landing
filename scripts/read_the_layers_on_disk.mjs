@@ -14,9 +14,10 @@
  *
  * | what is on disk | what this answers |
  * |---|---|
- * | a directory the docstring named | its files, and its modules counted apart from its init |
+ * | a directory the docstring named | its Python files, and its modules counted apart from its init |
  * | a directory the docstring named and the tree does not hold | `is_a_directory: false` — an absence, never a count of zero |
  * | a directory holding only `__init__.py` | a directory and nothing else, which the page says in words |
+ * | a directory holding a subdirectory and no Python | a directory and nothing else, which is a different fact from the row above |
  * | a package that is not on disk at all | `ThePackageIsNotOnDiskError` |
  *
  * A package directory with no `__init__.py` is still counted, and the file count says so —
@@ -71,14 +72,15 @@ export function what_is_on_disk(inside, the_layers) {
 		if (!is_a_directory(the_directory)) {
 			return { name: a_layer.name, is_a_directory: false, how_many_files: null, how_many_modules: null };
 		}
-		// **A subdirectory is not a file, and the project has one.** `web/` holds a `ui/`
-		// and no code, and a reader that counted entries rather than files reported a layer
-		// with a module in it — which is the whole mistake this table exists to avoid, made
-		// in the column that exists to prevent it. `__pycache__` is dropped for the same
-		// reason it is not a module: it is something a build left, not something a project
-		// wrote, and a layer whose only content is bytecode is a layer nobody has worked on.
+		// **Only Python counts, and that is what both columns are about.** `readdirSync`
+		// returns entries and the entries are whatever is in the directory: a subdirectory is
+		// not a file, a `README.md` beside a layer is not a module, and `__pycache__` is
+		// something a build left rather than something a project wrote. The project this
+		// page is about has all three — `web/ui/`, and bytecode in every layer that has ever
+		// been imported — and a reader that counted entries reported a layer with a module
+		// in it in the one column whose whole job is to keep a promise out of a code count.
 		const the_files = readdirSync(the_directory).filter(
-			(a_name) => a_name !== '__pycache__' && !is_a_directory(join(the_directory, a_name)),
+			(a_name) => a_name.endsWith('.py') && !is_a_directory(join(the_directory, a_name)),
 		);
 		return {
 			name: a_layer.name,

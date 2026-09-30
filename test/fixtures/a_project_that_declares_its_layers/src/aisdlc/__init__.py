@@ -15,6 +15,7 @@ checking nothing.
 - `store/` — where a run's record lives, and how a run resumes from one.
 - `llm/` — the one place a model is asked a question.
 - `web/` — the API and the board, holding a subdirectory and nothing else.
+- `creative/` — a repository briefing itself, whose module is on disk and ignored by git.
 - `repair/` — the supervisor that decides whether a stage is tried again, declared and not written.
 """
 
