@@ -37,6 +37,7 @@ const the_claims = the_state.the_claims_about_the_stages;
 const the_order = the_state.the_order;
 const siteUrl = 'https://steamnoid.github.io/ai-sdlc-bestof-landing';
 
+const the_github = the_state.the_github;
 const when_was_it_read = the_state.the_build?.read_at
 	? `${the_state.the_build.read_at.slice(0, 10)} ${the_state.the_build.read_at.slice(11, 16)} UTC`
 	: null;
@@ -627,6 +628,16 @@ const a_yes_or_a_no = (a_boolean) => (a_boolean ? 'yes' : 'no');
 							</h3>
 							<p class="mt-2 text-[13px] leading-relaxed text-zinc-600">
 								{the_rest.the_ci_says.detail} {the_rest.the_licence_says.detail}
+							</p>
+							<p class="mt-2 text-[13px] leading-relaxed text-zinc-600">
+								{the_github.was_read
+									? `GitHub describes it as: ${the_github.description}`
+									: the_github.why_not}
+							</p>
+							<p class="mt-2 text-[13px] leading-relaxed text-zinc-600">
+								{the_github.how_many_check_runs === null
+									? `The check runs on the tip commit are unread, which is not the same as there being none: ${the_github.why_the_check_runs_are_unread}`
+									: `The tip commit carries ${the_github.how_many_check_runs} check run(s) on ${the_state.the_history.branch}.`}
 							</p>
 						</div>
 					</div>

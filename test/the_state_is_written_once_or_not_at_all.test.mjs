@@ -26,7 +26,7 @@ import { deepStrictEqual, match, ok, strictEqual } from 'node:assert/strict';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { describe, it } from 'node:test';
+import { before, describe, it } from 'node:test';
 
 import {
 	collect_everything_about,
@@ -36,7 +36,7 @@ import {
 
 const the_project = resolve('test', 'fixtures', 'a_small_project');
 
-const collect_about = (at, overrides = {}) =>
+const collect_about = async (at, overrides = {}) =>
 	collect_everything_about(at, {
 		owner: 'fixture',
 		name: 'a_small_project',
@@ -46,9 +46,12 @@ const collect_about = (at, overrides = {}) =>
 	});
 
 describe('one state, holding everything the page may say', () => {
-	const the_state = collect_about(the_project);
+	let the_state;
+	before(async () => {
+		the_state = await collect_about(the_project);
+	});
 
-	it('names the page and the project separately, because a reader needs to know which is which', () => {
+	it('names the page and the project separately, because a reader needs to know which is which', async () => {
 		strictEqual(the_state.this_page.name, 'a_small_project-landing', 'the page is not named in the state');
 		strictEqual(the_state.the_project.name, 'a_small_project', 'the project is not named in the state');
 		ok(
@@ -57,7 +60,7 @@ describe('one state, holding everything the page may say', () => {
 		);
 	});
 
-	it('carries three columns for the layers, and a reader that merged them would lose the argument', () => {
+	it('carries three columns for the layers, and a reader that merged them would lose the argument', async () => {
 		deepStrictEqual(
 			Object.keys(the_state.the_layers),
 			['the_declared', 'on_disk', 'in_the_project'],
@@ -70,7 +73,7 @@ describe('one state, holding everything the page may say', () => {
 		);
 	});
 
-	it('carries a missing gate map as null with a sentence, and not as an absence', () => {
+	it('carries a missing gate map as null with a sentence, and not as an absence', async () => {
 		strictEqual(the_state.the_domain.gates, null, 'a gate map appeared for a project that has not written one');
 		ok(
 			the_state.the_domain.why_the_gates_could_not_be_read !== null,
@@ -78,19 +81,19 @@ describe('one state, holding everything the page may say', () => {
 		);
 	});
 
-	it('carries a suite nobody asked to run as the third thing', () => {
+	it('carries a suite nobody asked to run as the third thing', async () => {
 		strictEqual(the_state.the_suite.was_run, false, 'a suite nobody asked to run says it was run');
 		match(the_state.the_suite.why_not, /--run-the-suite/, 'the suite does not say what would run it');
 	});
 
-	it('says which interpreter read the code, because a page reporting a build must say on what', () => {
+	it('says which interpreter read the code, because a page reporting a build must say on what', async () => {
 		ok(
 			the_state.the_project.read_with.endsWith('python') || the_state.the_project.read_with === 'python3',
 			`the interpreter is "${the_state.the_project.read_with}" and is not a program`,
 		);
 	});
 
-	it('names a rule the tree does not hold, and says which file it is looking for', () => {
+	it('names a rule the tree does not hold, and says which file it is looking for', async () => {
 		strictEqual(
 			the_state.the_built_column.how_many_are_refuted,
 			1,
@@ -104,10 +107,10 @@ describe('one state, holding everything the page may say', () => {
 });
 
 describe('a project this page could not read', () => {
-	it('refuses by name, and says which reader and which rule', () => {
+	it('refuses by name, and says which reader and which rule', async () => {
 		let the_refusal = null;
 		try {
-			collect_about(join(tmpdir(), 'a-project-that-is-not-here'));
+			await collect_about(join(tmpdir(), 'a-project-that-is-not-here'));
 		} catch (the_failure) {
 			the_refusal = the_failure;
 		}
@@ -116,7 +119,7 @@ describe('a project this page could not read', () => {
 		ok(the_refusal.which_reader.length > 0, 'the refusal does not say which reader gave up');
 	});
 
-	it('carries the reader\'s own words, and not a summary of them', () => {
+	it('carries the reader\'s own words, and not a summary of them', async () => {
 		// **The property, not the branch.** A tree that is not a project can fail in more
 		// than one place — no package, an unimportable package, a package that declares no
 		// layers — and the first version of this test listed two of those names by hand and
@@ -125,7 +128,7 @@ describe('a project this page could not read', () => {
 		// declares no architecture.
 		let the_refusal = null;
 		try {
-			collect_about(join(tmpdir(), 'a-project-that-is-not-here'));
+			await collect_about(join(tmpdir(), 'a-project-that-is-not-here'));
 		} catch (the_failure) {
 			the_refusal = the_failure;
 		}
@@ -143,7 +146,7 @@ describe('a project this page could not read', () => {
 });
 
 describe('the state is written once, or not at all', () => {
-	it('writes a file a person can read, tab-indented and newline-terminated', () => {
+	it('writes a file a person can read, tab-indented and newline-terminated', async () => {
 		const the_directory = mkdtempSync(join(tmpdir(), 'the-state-'));
 		const where = join(the_directory, 'nested', 'the_bestof.json');
 		try {
@@ -156,13 +159,13 @@ describe('the state is written once, or not at all', () => {
 		}
 	});
 
-	it('leaves no file behind when a reader refused, because a half-answer looks like an answer', () => {
+	it('leaves no file behind when a reader refused, because a half-answer looks like an answer', async () => {
 		const the_directory = mkdtempSync(join(tmpdir(), 'the-state-'));
 		const where = join(the_directory, 'the_bestof.json');
 		try {
 			let it_refused = false;
 			try {
-				write_the_state(collect_about(join(tmpdir(), 'a-project-that-is-not-here')), where);
+				write_the_state(await collect_about(join(tmpdir(), 'a-project-that-is-not-here')), where);
 			} catch {
 				it_refused = true;
 			}
