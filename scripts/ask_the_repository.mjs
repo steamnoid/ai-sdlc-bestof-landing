@@ -40,6 +40,7 @@ import {
 import { read_the_glossary } from './read_the_glossary.mjs';
 import { read_the_history } from './read_the_git_history.mjs';
 import { read_what_github_says } from './read_github.mjs';
+import { read_where_it_came_from } from './read_where_it_came_from.mjs';
 import { what_is_on_disk } from './read_the_layers_on_disk.mjs';
 import { read_the_suite } from './read_the_suite.mjs';
 import { what_the_project_holds } from './read_what_the_project_holds.mjs';
@@ -139,6 +140,7 @@ export async function collect_everything_about(at, { owner, name, this_page, was
 			the_code.stages.map((a_stage) => a_stage.name),
 		),
 		the_history: read_the_history(at),
+		where_it_came_from: read_where_it_came_from(at),
 		the_github: await read_what_github_says(github_api, owner, name),
 		the_suite: read_the_suite(at, { was_it_asked_for: was_the_suite_asked_for }),
 	};
