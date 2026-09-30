@@ -1,0 +1,197 @@
+name: the page
+
+# The page is a view of another repository, so it is rebuilt on a schedule and not only
+# when it is edited. The schedule is what keeps such a page honest; it is also what GitHub
+# quietly turns off, which is why the keepalive job below exists.
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Hourly, at seventeen past. Not on the hour: GitHub documents that a schedule at :00
+    # queues behind everybody else's, and an hourly schedule is the one everybody writes at
+    # :00. Under load some queued jobs are dropped; this moves the tip of that and not the
+    # queue, and the `push` trigger is immediate and does not queue at all.
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  # Pages keeps only the newest deployment, so a second run cancels the first rather than
+  # the two deploying out of order.
+  group: pages
+  cancel-in-progress: true
+
+env:
+  # The branch the project is read from, and the one value here that has to be kept true.
+  THE_BRANCH: main
+  THE_PROJECT: steamnoid/ai-sdlc-bestof
+  THE_SITE: https://steamnoid.github.io/ai-sdlc-bestof-landing
+
+jobs:
+  collect:
+    name: Read the project
+    runs-on: ubuntu-latest
+    # A step's output is not a job's output. Without this block the build job's
+    # `needs.collect.outputs.has_changed` is empty, its `if:` is false, the build is skipped
+    # on every run, and the run reports success having published nothing at all.
+    outputs:
+      has_changed: ${{ steps.change.outputs.has_changed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install uv, because the project's own suite runs on the project's own interpreter
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Check out the project this page is about
+        # **Whole, and not shallow.** A `--depth 1` clone is the fast way to get a build and
+        # it reports a history of one commit — so the page's RED/GREEN pairing would be
+        # counted from a single commit and drawn in total confidence. The same line is in
+        # `scripts/check_out_the_project.mjs`, with the reason beside it.
+        #
+        # Checked out here rather than by the collector, because the next step needs the
+        # project on disk and the step after that needs its dependencies installed: a
+        # collector that cloned as its first act would have nothing to sync against.
+        run: node scripts/check_out_the_project.mjs
+
+      - name: Install the project's own dependencies
+        # The collector imports the project's code, and that code imports pydantic. A bare
+        # interpreter cannot read the state machine, and the refusal it produces says so by
+        # name — which is the right behaviour and not a way to build a page.
+        run: uv sync --all-groups --project build/the-repository
+
+      - name: Read the project, run its suite, and write the state
+        # No GITHUB_TOKEN is passed on purpose: GitHub documents that using one against the
+        # REST API invites secondary rate limits, and every endpoint asked for here is
+        # public. If a call fails the reader records "unread" with the reason, so a rate
+        # limit shortens the page instead of breaking the build.
+        #
+        # The interpreter is left to the collector, which prefers the checkout's own virtual
+        # environment — the one just installed.
+        run: >-
+          node scripts/ask_the_repository.mjs
+          --repository build/the-repository
+          --ref "$THE_BRANCH"
+          --run-the-suite
+          --github-api https://api.github.com
+          --out src/state/the_bestof.json
+
+      - name: The collectors' own tests
+        # These need nothing but node, so they run before the project's dependencies exist
+        # and without the state the previous step wrote. The one that *builds* the page runs
+        # in the build job, where the state it reads is already there.
+        run: npm run test:collectors
+
+      - name: Has anything the page prints changed
+        id: change
+        # The live site publishes the state it was built from, so this needs no previous run,
+        # no token and no deployment history. A state that cannot be read counts as a change:
+        # a comparison that did not happen is not agreement.
+        run: node scripts/has_anything_changed.mjs --state src/state/the_bestof.json --published-at "$THE_SITE"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: the-state
+          # **The directory, not the file.** An artifact of one file has that file's own
+          # directory as its root, so uploading the file produces an artifact holding
+          # `the_bestof.json` — and downloading that into the repository root lands beside
+          # the committed copy rather than at `src/state`. The sibling page's first
+          # deployment did exactly this and published last month's numbers while reporting
+          # success.
+          path: src/state
+          retention-days: 7
+
+  build:
+    name: Build the page
+    needs: collect
+    # Skipped when every fact on the page is the fact already published. The run still ends
+    # green — a skipped build is a build that had nothing to do, not a failure. A **dispatch
+    # always builds**, because refusing a person's request because nothing had changed is a
+    # green first stage and then silence.
+    if: github.event_name == 'workflow_dispatch' || needs.collect.outputs.has_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Take the state the collect job read
+        uses: actions/download-artifact@v4
+        with:
+          name: the-state
+          # Into `src/state`, matching what was uploaded. The state file is not committed, so
+          # if this step fails the build cannot find it — which is a loud failure, and the
+          # whole reason for that: a page built from a state the build did not read is a page
+          # that lies and says nothing.
+          path: src/state
+
+      - run: npm ci
+
+      - name: The page's own test
+        # The test that builds the page and checks its facts against the state just read. It
+        # is the one that catches a sentence somebody typed, and it needs the state and
+        # Astro, so it belongs here rather than in the collect job.
+        run: npm run test:page
+
+      - run: npm run build
+      # The state is copied in by a build hook in astro.config.mjs, not by a step here, so
+      # that a developer's `npm run build` and this run produce the same artifact.
+
+      - uses: actions/configure-pages@v5
+        with:
+          # Turns Pages on if it is off. The first attempt at this failed without it, and the
+          # failure is an error that says nothing about Pages.
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  keepalive:
+    name: Keep the schedule alive
+    # **Needs `collect`, not `deploy`.** A keepalive that needed the deploy could only run
+    # when something had changed, and nothing changing is the state a keepalive exists to
+    # survive. GitHub disables scheduled workflows in a public repository after 60 days
+    # without activity in it, and a page that rebuilds itself never gets a commit.
+    needs: collect
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      # The only job that may commit, and the reason it may.
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # A job that reads the history cannot judge what it judges without it.
+          fetch-depth: 0
+
+      - name: How long since this repository last heard from a human
+        id: silence
+        run: node scripts/keep_the_schedule_alive.mjs --tell-me-the-silence
+
+      - name: An empty commit, only if the silence is close to the limit
+        if: steps.silence.outputs.how_many_days > 45
+        run: node scripts/keep_the_schedule_alive.mjs

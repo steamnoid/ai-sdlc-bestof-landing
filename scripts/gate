@@ -1,0 +1,35 @@
+#!/bin/sh
+# The gate, and the one command.
+#
+# **Fastest first, and it stops at the first refusal.** A gate that runs everything and
+# reports at the end tells a reader five things at once, and the first of them is usually the
+# one they were not looking at. `set -e` means the first failure ends the run, so the error
+# on the terminal is the error.
+#
+# **No formatter.** A formatting failure is a diff and not a broken rule, so a formatter in a
+# gate is a check with no rule behind it — which is this repository's own argument about
+# "built and never wired" turned round and pointed at itself. The gate checks that the
+# repository is buildable, that its facts hold, and that the page can be built from them.
+#
+# The state is **read, not committed**, so `collect` runs before `build` and a fresh clone
+# has nothing to build from until it has read something. That ordering is the reason the
+# last step exists.
+
+set -e
+
+the_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$the_root"
+
+echo "== the page's own tests, which reach no network"
+npm run --silent test
+
+echo "== read the project, run its suite, and write the state"
+npm run --silent collect
+
+echo "== build the page from what was read"
+npm run --silent build
+
+echo "== the page's facts, against the state it was just read into"
+npm run --silent test:page
+
+echo "the gate is green"
