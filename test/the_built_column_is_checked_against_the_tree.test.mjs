@@ -39,6 +39,16 @@ import { what_the_built_column_says } from '../src/page/what_the_built_column_sa
 
 const the_project = resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'a_small_project');
 
+/**
+ * The fixture's own glossary, whose banned block is the property under test — so nothing here
+ * reads a checkout beside this repository.
+ *
+ * **The first version of this file read the real project**, for the banned word, and that made
+ * it red on every fresh clone and on every runner. A test that needs a checkout beside this
+ * one is a test whose failure means nothing where it is run, and the words in the comment
+ * above it were exactly right about that.
+ */
+
 /** What the reader found, for the four refusals the fixture's glossary publishes. */
 const what_was_found = (a_name) => where_a_name_is_declared(the_project, a_name).the_files_that_declare_it;
 
@@ -59,13 +69,13 @@ describe('a declaration is a declaration, and a mention is not', () => {
 		// and the glossary says a refused word appears exactly once and in plain prose
 		// elsewhere. A reader that searched for text would find every banned word in the
 		// project and report the project as declaring all of them.
-		const the_banned = readFileSync(resolve('..', 'ai-sdlc-bestof', 'docs', 'domain-glossary.md'), 'utf8');
+		const the_banned = readFileSync(resolve(the_project, 'docs', 'domain-glossary.md'), 'utf8');
 		ok(
 			/Banned vocabulary/.test(the_banned),
 			'the banned block is not in the project, so there is nothing for this test to catch a reader on',
 		);
 		deepStrictEqual(
-			where_a_name_is_declared(resolve('..', 'ai-sdlc-bestof'), 'Manager').the_files_that_declare_it,
+			where_a_name_is_declared(the_project, 'Manager').the_files_that_declare_it,
 			[],
 			'a word the project refuses was found as a declaration, so the search is for mentions and not for declarations',
 		);
