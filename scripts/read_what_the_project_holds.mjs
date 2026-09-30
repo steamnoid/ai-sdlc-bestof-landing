@@ -26,6 +26,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { statSync } from 'node:fs';
 
@@ -62,8 +63,19 @@ const ask_git = (inside, ...the_question) => {
  * repository that is not empty. So the root is asked for and the prefix is built from it.
  */
 const the_files_git_holds = (inside) => {
-	const the_root = ask_git(inside, 'rev-parse', '--show-toplevel').trim();
-	const the_package = relative(the_root, where_the_package_lives(inside)).split('\\').join('/');
+	// **Both sides are resolved, and that is the whole fix.** `git rev-parse --show-toplevel`
+	// answers with the *real* path, while the directory it was given may be a symlink — and on
+	// macOS `/tmp` and `/var/folders` are both symlinks. So `relative(realRoot, askedPath)`
+	// produces a path that climbs out of the repository with `../../..` in it, git refuses it
+	// as a pathspec, and the reader reports a project that is not a checkout.
+	//
+	// **This is invisible on Linux and fires on every macOS temporary directory.** A fresh
+	// clone is how it was found: the test that caught it builds its tree with `mkdtemp`, which
+	// on macOS is behind a symlink and on a CI runner is not.
+	const the_root = realpathSync(ask_git(inside, 'rev-parse', '--show-toplevel').trim());
+	const the_package = relative(the_root, realpathSync(where_the_package_lives(inside)))
+		.split('\\')
+		.join('/');
 	// **Git is run from the root and given a root-relative path, because the two disagree
 	// about what a path means.** A pathspec is read from the directory git runs in and the
 	// answer is written from the root, so asked from a package's own directory this reader

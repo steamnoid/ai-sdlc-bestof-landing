@@ -28,7 +28,7 @@
 
 import { deepStrictEqual, match, ok, strictEqual } from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -66,6 +66,30 @@ const a_project_that_declares_nothing = () => {
 		join(the_root, 'src', 'aisdlc', '__init__.py'),
 		'"""A package with a docstring and no list in it."""\n\nfrom __future__ import annotations\n',
 	);
+	return the_root;
+};
+
+
+/**
+ * A copy of the fixture, committed into a checkout of its own.
+ *
+ * **A new checkout and not a subdirectory of this one.** `git ls-files` answers with the
+ * enclosing repository for a subdirectory, so a test wanting to see an untracked file inside
+ * this repository would be reading this repository's index — and the answer it would get is
+ * the one it is trying to construct.
+ */
+const a_checkout_with_the_fixture_among_its_files = () => {
+	// **`cpSync` into a directory that already exists nests inside it**, so the copy lands at
+	// `<tmp>/a_small_project` and the checkout is never made there. The destination is named
+	// explicitly rather than left to the call's idea of what an existing directory means.
+	const the_root = join(mkdtempSync(join(tmpdir(), 'a-checkout-of-the-fixture-')), 'the-project');
+	cpSync(the_project, the_root, { recursive: true });
+	const git = (...the_question) => execFileSync('git', the_question, { cwd: the_root, encoding: 'utf8' });
+	git('init', '--quiet', '--initial-branch=main');
+	git('config', 'user.name', 'a test');
+	git('config', 'user.email', 'test@localhost');
+	git('add', '-A');
+	git('commit', '--quiet', '-m', 'the fixture, committed');
 	return the_root;
 };
 
@@ -228,19 +252,30 @@ describe('what is on disk in each declared layer', () => {
 
 describe('what the project holds, which is not what is on disk', () => {
 	it('counts a file git does not hold as held by nobody, while the disk says it is there', () => {
-		// **The fixture's `creative/` has a module on disk and a `.gitignore` that ignores
-		// it.** Both readers are right about it and they disagree, and a page that merged
-		// them would report a layer with code in it that a clone does not have — the exact
-		// shape of "built and never wired", arrived at by an uncommitted file instead of a
-		// whole missing wiring.
-		const the_declared = ask_about(the_project).the_layers;
-		const the_disk = what_is_on_disk(the_project, the_declared);
-		const held = what_the_project_holds(the_project, the_declared);
+		// **The state is made here and not carried by the fixture, because a clone cannot have
+		// it.** "On disk and not in the project" is what an uncommitted file looks like, and a
+		// clone only ever has committed files — so a fixture asserting this was green in a
+		// developer's working tree and red in every fresh clone, which is the second time in
+		// this file's life that a fixture's own state was the thing that broke.
+		//
+		// The copy is a **new checkout** rather than this one, because `git ls-files` answers
+		// with the enclosing repository for a subdirectory, and a test that wanted to see an
+		// untracked file inside this repository would be reading this repository's index.
+		const the_root = a_checkout_with_the_fixture_among_its_files();
+		const the_layer_directory = join(the_root, 'src', 'aisdlc', 'creative');
+		mkdirSync(the_layer_directory, { recursive: true });
+		writeFileSync(join(the_layer_directory, 'the_briefing.py'), '"""Written, and not committed."""\n');
 
-		const on_disk = the_disk.find((a_layer) => a_layer.name === 'creative');
-		const held_here = held.find((a_layer) => a_layer.name === 'creative');
-		strictEqual(on_disk.how_many_modules, 1, 'the module is on disk, or the fixture is not the fixture');
-		strictEqual(held_here.how_many_modules, 0, 'the module is in the fixture and ignored, so git does not hold it');
+		const the_declared = ask_about(the_root).the_layers;
+		const on_disk = what_is_on_disk(the_root, the_declared).find((a_layer) => a_layer.name === 'creative');
+		const held = what_the_project_holds(the_root, the_declared).find((a_layer) => a_layer.name === 'creative');
+
+		strictEqual(on_disk.how_many_modules, 1, 'the file was written to disk, so the disk reader is not looking at the wrong directory');
+		strictEqual(
+			held.how_many_modules,
+			0,
+			'a file nobody committed was counted as held, and then the two columns could never disagree about anything',
+		);
 	});
 
 	it('agrees with the disk about a layer the project really does hold', () => {
