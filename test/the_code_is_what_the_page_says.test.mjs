@@ -215,6 +215,10 @@ describe('a gate map that is not there is a value, and not a refusal', () => {
 
 describe('a project that says nothing about who holds its work is refused', () => {
 	it('refuses by name, names the stage, and prints nothing on stdout', () => {
+		// **The whole table is rewritten, not just the stage.** Rewriting `stage.py` alone
+		// leaves the move table naming a stage the enumeration no longer has, which is a
+		// different refusal and a real one — a tree part-way through an edit — and a test
+		// that meant to ask about the invariant would be passing for the wrong reason.
 		const the_root = a_project_whose_stages_answer_for_themselves();
 		writeFileSync(
 			join(the_root, 'src', 'aisdlc', 'domain', 'stage.py'),
@@ -231,6 +235,19 @@ describe('a project that says nothing about who holds its work is refused', () =
 				'',
 			].join('\n'),
 		);
+		writeFileSync(
+			join(the_root, 'src', 'aisdlc', 'domain', 'state_machine.py'),
+			[
+				'"""The table, and still nothing about who holds anything."""',
+				'',
+				'from aisdlc.domain.stage import Stage',
+				'',
+				'LEGAL_TRANSITIONS: dict[Stage, frozenset[Stage]] = {',
+				'    Stage.WAITING: frozenset(),',
+				'}',
+				'',
+			].join('\n'),
+		);
 		const the_failure = ask_and_take_the_refusal(the_root);
 		ok(the_failure, 'a project that says nothing about its invariant was answered about rather than refused');
 		strictEqual(the_failure.status, 1, 'the refusal exited zero, so a collector would read it as an answer');
@@ -241,5 +258,40 @@ describe('a project that says nothing about who holds its work is refused', () =
 			'the refusal is not named after the rule it protects',
 		);
 		match(String(the_failure.stderr), /WAITING/, 'the refusal does not name the stage the project left unmentioned');
+	});
+
+	it('refuses a table naming a stage that is not there, and does not print a traceback', () => {
+		// **A stage deleted from the enumeration leaves the table behind referring to it.**
+		// The helper's tree is already in exactly that state after `stage.py` is replaced,
+		// and the first version of this reader let the `AttributeError` out — so the page
+		// would have shown a Python traceback, which is a true sentence about this
+		// repository and one no reader can act on.
+		const the_root = a_project_whose_stages_answer_for_themselves();
+		writeFileSync(
+			join(the_root, 'src', 'aisdlc', 'domain', 'stage.py'),
+			[
+				'"""Stages, with one of the pair deleted."""',
+				'',
+				'from enum import Enum',
+				'',
+				'',
+				'class Stage(Enum):',
+				'    """One stage, and the table still knows two."""',
+				'',
+				'    WAITING = "WAITING"',
+				'',
+			].join('\n'),
+		);
+		const the_failure = ask_and_take_the_refusal(the_root);
+		ok(the_failure, 'a table naming a stage that is not there was answered about rather than refused');
+		match(
+			String(the_failure.stderr),
+			/TheTableNamesAStageThatIsNotThereError/,
+			'the refusal is not named after the rule it protects',
+		);
+		ok(
+			!String(the_failure.stderr).includes('Traceback'),
+			'stderr carries a Python traceback, so the page would show a stack trace instead of a sentence about the project',
+		);
 	});
 });
