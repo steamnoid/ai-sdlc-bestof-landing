@@ -64,11 +64,80 @@ export class TheProjectCouldNotBeReadError extends Error {
  * @param {{owner: string, name: string, this_page: string, was_the_suite_asked_for: string|null}} about
  * @returns {object} the state, which this function builds and never writes
  */
-export function collect_everything_about(at, about) {
-	throw new TheProjectCouldNotBeReadError(
-		'the whole project',
-		`${at} was not read: this collector reads nothing yet.`,
+export function collect_everything_about(at, { owner, name, this_page, was_the_suite_asked_for = null }) {
+	const the_interpreter = the_interpreter_to_read_the_code_with(at);
+
+	const the_layers = this_reads('the layers a package declares', () =>
+		ask_a_python_reader('scripts/ask_the_layers.py', at, the_interpreter),
 	);
+	const the_code = this_reads('the domain a project declares', () =>
+		ask_a_python_reader('scripts/ask_the_code.py', at, the_interpreter),
+	);
+
+	// **Three columns, and the caller is handed all three.** The layers were declared by a
+	// docstring, counted on a disk, and counted in the project's own index — the last two
+	// being the same set on a clean checkout and differing on exactly the files a developer
+	// has not committed.
+	const the_layers_answered = {
+		the_declared: the_layers.the_layers,
+		on_disk: what_is_on_disk(at, the_layers.the_layers),
+		in_the_project: what_the_project_holds(at, the_layers.the_layers),
+	};
+
+	const the_glossary = read_the_glossary(at);
+
+	// **Every published claim about a refusal, checked against the tree — and only when a
+	// glossary was published.** A project with no glossary has no claims, and a check over
+	// an empty list is a check that would report every project as perfect.
+	const the_claims = the_glossary.was_read
+		? the_glossary.the_refusals.map((a_refusal) => ({
+				...a_refusal,
+				the_files_that_declare_it: where_a_name_is_declared(at, a_refusal.name)
+					.the_files_that_declare_it,
+			}))
+		: [];
+	const how_a_claim_was_checked =
+		the_claims.length === 0
+			? null
+			: where_a_name_is_declared(at, the_claims[0].name).how_it_was_looked_for;
+
+	return {
+		this_page: {
+			owner,
+			name: this_page,
+			url: `https://github.com/${owner}/${this_page}`,
+		},
+		the_project: {
+			owner,
+			name,
+			address: `https://github.com/${owner}/${name}`,
+			on_disk: at,
+			which_code_answered: the_code.which_code_answered,
+			read_with: the_interpreter,
+		},
+		the_build: { read_at: new Date().toISOString() },
+		the_layers: the_layers_answered,
+		the_domain: the_code,
+		the_glossary,
+		// **Five documents, each carried with its own answer.** They are not merged into one
+		// `the_documents` because a merged field is a field whose absence means all five at
+		// once, and each of these is published or not on its own.
+		the_manifest: read_the_manifest(at),
+		the_rules: read_the_rules(at),
+		the_workflows: read_the_workflows(at),
+		the_commands_a_visitor_may_run: read_what_a_visitor_may_run(at),
+		the_licence: read_the_licence(at),
+		the_built_column: what_the_built_column_says(the_claims, how_a_claim_was_checked),
+		the_claims_about_the_stages: what_the_glossary_says_about_the_stages(
+			the_glossary.was_read ? the_glossary.the_stages : null,
+			the_code.stages,
+		),
+		the_order: what_the_order_says(
+			the_glossary.was_read ? the_glossary.the_stages.map((a_stage) => a_stage.name) : null,
+			the_code.stages.map((a_stage) => a_stage.name),
+		),
+		the_suite: read_the_suite(at, { was_it_asked_for: was_the_suite_asked_for }),
+	};
 }
 
 /** A reader, and the rule that a refusal of it is this collector's refusal. */
