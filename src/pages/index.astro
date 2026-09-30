@@ -166,7 +166,20 @@ const a_yes_or_a_no = (a_boolean) => (a_boolean ? 'yes' : 'no');
 						<dd class="mt-2 text-2xl font-semibold tabular-nums">
 							{the_suite.verdict === 'not run' ? '—' : the_suite.passed}
 						</dd>
-						<dd class="mt-1 text-[12px] text-zinc-500">{the_suite.verdict === 'not run' ? 'not run' : 'passed'}</dd>
+						<!-- **The label follows the verdict, and this is not a detail.** The first
+						     published run of this page printed "passed" beside the count of a
+						     suite that had exited 1 — a word typed into a template, over the one
+						     number a reader came for. The sibling page's own test says it: a page
+						     that reports the passes is reporting the part it likes. -->
+						<dd class="mt-1 text-[12px] text-zinc-500">
+							{
+								the_suite.verdict === 'not run'
+									? 'not run'
+									: the_suite.verdict === 'green'
+										? 'passed'
+										: 'failed'
+							}
+						</dd>
 					</div>
 					<div class="rounded-xl border border-zinc-200 bg-white p-5">
 						<dt class="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">Refusals claimed</dt>

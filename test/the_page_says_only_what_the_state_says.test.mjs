@@ -128,10 +128,23 @@ if (!existsSync(where_the_state_lives)) {
 		});
 
 		it('carries the suite\'s verdict in the reader\'s own words, both ways', () => {
+			// **Both branches, and the number beside them.** The first published run of this
+			// page printed "passed" under a count of `1 failed, 189 passed` — a word in a
+			// template, sitting under the one number a reader came for. The label is a fact
+			// about the suite and it has to follow the verdict like every other one.
+			// **\d+ is not a capture group**, so the word is the first and only one. Reading index 2 of a
+			// two-element match is undefined, and an assertion against undefined fails on a page that is
+			// correct — which is a test that trains its reader to ignore it.
+			const the_card_is_labelled = the_page_as_text.match(/\d+\s+(passed|failed)\b/);
 			if (the_state.the_suite.is_green) {
 				ok(the_page_as_text.includes('exited 0'), 'the suite is green and the page does not say what it exited');
+				ok(the_card_is_labelled?.[1] === 'passed', `the card is labelled "${the_card_is_labelled?.[1]}" beside a count the suite passed`);
 			} else {
 				ok(!the_page_as_text.includes('exited 0'), 'the suite is not green and the page says it exited 0');
+				ok(
+					the_card_is_labelled?.[1] !== 'passed',
+					`the card says "passed" beside a count from a suite that did not pass: ${the_card_is_labelled?.[0]}`,
+				);
 			}
 		});
 

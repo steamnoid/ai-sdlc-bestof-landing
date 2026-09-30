@@ -115,6 +115,14 @@ export function read_the_suite(inside, { was_it_asked_for = null, how_to_run_it 
 	} catch (the_failure) {
 		what_it_printed = `${the_failure.stdout ?? ''}${the_failure.stderr ?? ''}`;
 		the_exit_code = typeof the_failure.status === 'number' ? the_failure.status : 1;
+		// **A process that never started has its reason in the failure, not in its streams.**
+		// A missing interpreter writes nothing to either, so a reader that reads only the two
+		// reports an exit code above an empty terminal — which is exactly what the first
+		// published run of this page did: "the suite exited 1" and nothing else, with the
+		// runner's real complaint discarded.
+		if (what_it_printed.trim() === '') {
+			what_it_printed = `the suite could not be started: ${`${the_failure.message}`.split('\n')[0]}`;
+		}
 	}
 
 	const the_lines = what_it_printed.trim().split('\n');
