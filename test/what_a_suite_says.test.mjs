@@ -48,6 +48,7 @@ describe('a suite that exited zero, and a suite that exited something else', () 
 			a_suite_that({
 				'test_passing.py': 'def test_one():\n    assert True\n',
 			}),
+			{ was_it_asked_for: '--run-the-suite' },
 		);
 		strictEqual(the_answer.was_run, true, 'the suite was not run at all');
 		strictEqual(the_answer.is_green, true, `a suite that exited 0 is not green: ${the_answer.why_not}`);
@@ -63,6 +64,7 @@ describe('a suite that exited zero, and a suite that exited something else', () 
 				'test_mixed.py':
 					'def test_passes():\n    assert True\n\n\ndef test_fails():\n    assert 1 == 2\n',
 			}),
+			{ was_it_asked_for: '--run-the-suite' },
 		);
 		strictEqual(the_answer.is_green, false, 'a suite with a failure in it was called green');
 		strictEqual(the_answer.passed, '1', 'the passing count was dropped, so the reader is only reporting failures');
@@ -94,6 +96,7 @@ describe('a count the runner never printed is not a count of zero', () => {
 			a_suite_that({
 				'test_broken.py': 'this is not python at all (\n',
 			}),
+			{ was_it_asked_for: '--run-the-suite' },
 		);
 		strictEqual(the_answer.is_green, false, 'a suite that cannot be collected was called green');
 		strictEqual(
@@ -115,12 +118,12 @@ describe('the interpreter is the project\'s own', () => {
 		// that ran it that way would be publishing its own environment as the project's
 		// health — the exact shape of a page lying without intending to.
 		const the_root = a_suite_that({ 'test_passing.py': 'def test_one():\n    assert True\n' });
-		const the_answer = read_the_suite(the_root);
+		const the_answer = read_the_suite(the_root, { was_it_asked_for: '--run-the-suite' });
 		match(the_answer.what_was_run, /python/, 'the reader does not say what it ran the suite with');
 	});
 
 	it('says what it ran the suite with, because a page showing a number has to show the command', () => {
-		const the_answer = read_the_suite(a_suite_that({ 'test_passing.py': 'def test_one():\n    assert True\n' }));
+		const the_answer = read_the_suite(a_suite_that({ 'test_passing.py': 'def test_one():\n    assert True\n' }), { was_it_asked_for: '--run-the-suite' });
 		match(the_answer.what_was_run, /pytest/, 'the command the suite ran under is not on the page');
 	});
 });
@@ -131,6 +134,7 @@ describe('what the runner printed, byte for byte', () => {
 			a_suite_that({
 				'test_mixed.py': 'def test_fails():\n    assert 1 == 2\n',
 			}),
+			{ was_it_asked_for: '--run-the-suite' },
 		);
 		match(
 			the_answer.what_it_printed,

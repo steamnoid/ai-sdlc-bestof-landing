@@ -85,9 +85,9 @@ const the_counts_in = (a_line) => {
  * @param {{how_to_run_it?: string, was_it_asked_for: string}} what_was_asked_for
  * @returns {object} the three shapes above, never a thrown error
  */
-export function read_the_suite(inside, { was_it_asked_for = '--run-the-suite', how_to_run_it = null } = {}) {
+export function read_the_suite(inside, { was_it_asked_for = null, how_to_run_it = null } = {}) {
 	if (was_it_asked_for === null) {
-		return a_suite_that_was_not_run(what_was_asked_for);
+		return a_suite_that_was_not_run('--run-the-suite');
 	}
 	const the_interpreter = the_interpreter_to_run_it_with(inside, how_to_run_it);
 	// **The arguments, and not the command.** The interpreter is the program and putting it
