@@ -38,6 +38,7 @@ import {
 	read_the_workflows,
 } from './read_the_documentation.mjs';
 import { read_the_glossary } from './read_the_glossary.mjs';
+import { read_the_history } from './read_the_git_history.mjs';
 import { what_is_on_disk } from './read_the_layers_on_disk.mjs';
 import { read_the_suite } from './read_the_suite.mjs';
 import { what_the_project_holds } from './read_what_the_project_holds.mjs';
@@ -136,6 +137,7 @@ export function collect_everything_about(at, { owner, name, this_page, was_the_s
 			the_glossary.was_read ? the_glossary.the_stages.map((a_stage) => a_stage.name) : null,
 			the_code.stages.map((a_stage) => a_stage.name),
 		),
+		the_history: read_the_history(at),
 		the_suite: read_the_suite(at, { was_it_asked_for: was_the_suite_asked_for }),
 	};
 }

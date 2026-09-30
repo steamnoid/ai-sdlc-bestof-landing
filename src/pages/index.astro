@@ -93,6 +93,7 @@ const a_yes_or_a_no = (a_boolean) => (a_boolean ? 'yes' : 'no');
 							['#machine', 'Domain'],
 							['#glossary', 'Glossary'],
 							['#claims', 'Claims'],
+								['#history', 'History'],
 							['#suite', 'Suite'],
 							['#truth', 'Truth'],
 						].map(([the_anchor, the_label]) => (
@@ -480,6 +481,82 @@ const a_yes_or_a_no = (a_boolean) => (a_boolean ? 'yes' : 'no');
 							</ul>
 						</div>
 					</div>
+				</div>
+			</section>
+
+			<!-- The page is rebuilt on a schedule and on every push, so what it says about
+			     freshness is the time it read the project — never a promise about when. A
+			     sibling page said "every hour" for a day and was wrong for most of it: GitHub
+			     documents `schedule` as best-effort, and it was measured here at 3.4 hours,
+			     then 6.1, then not at all. -->
+			<section id="history" class="scroll-mt-14 border-y border-zinc-200 bg-white py-12 md:py-16">
+				<div class="mx-auto max-w-6xl px-6">
+					<div class="flex flex-wrap items-baseline justify-between gap-3">
+						<h2 class="text-2xl font-semibold tracking-tight">
+							The {the_state.the_history.commits.length} commits, and the rule they hold themselves to
+						</h2>
+						<span class="font-mono text-[12px] text-zinc-500">
+							{the_state.the_history.branch ?? 'not a checkout'} at {the_state.the_history.tip_commit ?? '—'}
+						</span>
+					</div>
+
+					{
+						the_state.the_history.is_a_git_repository ? (
+							<>
+								<p class="mt-2 max-w-3xl text-[14px] leading-relaxed text-zinc-600">
+									A behaviour change is a failing test first, then the behaviour: two commits,
+									and a GREEN with no RED beside it is a violation anybody can see in{' '}
+									<span class="font-mono text-zinc-900">git log</span>. The page counts that
+									pairing and draws no verdict on it — the project squash-merges whole cycles,
+									and whether a squash satisfies the rule is a judgement about a project.
+								</p>
+								<div class="mt-5 grid gap-3 sm:grid-cols-3">
+									<div class="rounded-xl border border-zinc-200 p-4">
+										<dt class="text-[11px] tracking-wider text-zinc-500 uppercase">Saying they are RED</dt>
+										<dd class="mt-1.5 text-2xl font-semibold tabular-nums">
+											{the_state.the_history.red}
+										</dd>
+									</div>
+									<div class="rounded-xl border border-zinc-200 p-4">
+										<dt class="text-[11px] tracking-wider text-zinc-500 uppercase">Making something pass</dt>
+										<dd class="mt-1.5 text-2xl font-semibold tabular-nums">
+											{the_state.the_history.green}
+										</dd>
+									</div>
+									<div class="rounded-xl border border-zinc-200 p-4">
+										<dt class="text-[11px] tracking-wider text-zinc-500 uppercase">Answered by the next commit</dt>
+										<dd class="mt-1.5 text-2xl font-semibold tabular-nums">
+											{the_state.the_history.answered}
+										</dd>
+									</div>
+								</div>
+								<p class="mt-3 max-w-3xl text-[12px] leading-relaxed text-zinc-500">
+									{the_state.the_history.red === the_state.the_history.answered
+										? 'Every RED is answered by the commit after it.'
+										: `The three numbers are not equal: ${the_state.the_history.red - the_state.the_history.answered} RED commit(s) are not followed by one that makes something pass.`}
+								</p>
+
+								<ul class="mt-5 divide-y divide-zinc-100 border-t border-zinc-100">
+									{
+										the_state.the_history.recent.map((a_commit) => (
+											<li class="flex flex-wrap items-baseline gap-3 py-2.5 text-[13px]">
+												<span class="font-mono text-[12px] text-zinc-400">{a_commit.commit}</span>
+												<span class="text-zinc-700">{a_commit.subject}</span>
+												<span class="ml-auto font-mono text-[11px] text-zinc-400">
+													{a_commit.authored_at.slice(0, 10)}
+												</span>
+											</li>
+										))
+									}
+								</ul>
+							</>
+						) : (
+							<p class="mt-2 max-w-3xl rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-[13px] leading-relaxed text-zinc-600">
+								{the_state.the_history.why_not} So there is no history to count, and a page that
+								drew a zero here would be reporting a measurement nobody made.
+							</p>
+						)
+					}
 				</div>
 			</section>
 
