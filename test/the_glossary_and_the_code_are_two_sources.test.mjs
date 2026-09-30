@@ -157,11 +157,15 @@ describe('the order, which is a different question from the names', () => {
 			['IDLE', 'AWAITING_AGENT_PICKUP', 'READY'],
 		);
 		strictEqual(the_answer.verdict, 'a different order', 'two different sequences are the same order');
+		// **Counted from one, because the sentence beside it says "second".** A field counting
+		// from zero beside a sentence counting from one is the page printing `1` next to
+		// "the second entry", and no reader believes either after that.
 		strictEqual(
 			the_answer.the_first_one_that_differs,
-			1,
-			'the place the two orders first differ is not named, so a reader has to compare two lists by eye',
+			2,
+			'the place the two orders first differ is not the one its own sentence names',
 		);
+		match(the_answer.detail, /\bsecond\b/, 'the sentence does not spell the position a reader counts in');
 	});
 
 	it('does not claim a difference when one of the two could not be read', () => {
