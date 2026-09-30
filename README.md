@@ -99,6 +99,7 @@ scripts/compare_the_states.mjs      what differs, and what is only about the run
 scripts/has_anything_changed.mjs    asks the live page, because it is the previous state
 scripts/check_out_the_project.mjs   the clone, whole — a shallow one reports one commit
 scripts/keep_the_schedule_alive.mjs one empty commit, when the silence is long enough
+scripts/keep_the_two_lists_in_step.mjs    writes the two test lists, and only when they are wrong
 src/page/what_the_page_says.mjs     the only place a number becomes a claim
 src/page/what_the_glossary_says.mjs three verdicts, and not one of them refuses
 src/page/what_the_built_column_says.mjs   two disagreements, never sharing a sentence
