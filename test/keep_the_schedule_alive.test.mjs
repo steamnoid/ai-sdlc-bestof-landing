@@ -64,7 +64,17 @@ const a_checkout_silent_for = (days_ago, { with_a_remote = true } = {}) => {
 	git('config', 'user.name', 'ktoś testujący');
 	git('config', 'user.email', 'a-test@example.invalid');
 	if (with_a_remote) {
-		execFileSync('git', ['init', '--quiet', '--bare', where_it_goes], { encoding: 'utf8', stdio: 'ignore' });
+		// **--initial-branch on the bare repository too, and this is the whole reason four of
+		// these tests were green on a laptop and red on the first runner.** A bare `git init`
+		// without it takes the branch from the machine's `init.defaultBranch`, which is `main`
+		// on a laptop and unset on a runner — so the remote's `HEAD` came to point at
+		// `refs/heads/master` while the push created `refs/heads/main`. `HEAD` then resolved to
+		// nothing, and `git rev-list --count HEAD` prints its **usage** and exits 128 rather
+		// than saying zero, which reads as a script that did not push.
+		execFileSync('git', ['init', '--quiet', '--bare', '--initial-branch=main', where_it_goes], {
+			encoding: 'utf8',
+			stdio: 'ignore',
+		});
 		git('remote', 'add', 'origin', where_it_goes);
 	}
 	execFileSync('git', ['commit', '--quiet', '--allow-empty', '-m', 'the last real commit'], {
