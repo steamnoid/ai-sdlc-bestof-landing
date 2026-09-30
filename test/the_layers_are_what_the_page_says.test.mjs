@@ -69,11 +69,11 @@ const a_project_that_declares_nothing = () => {
 };
 
 describe('the layers a package declares, read out of its own docstring', () => {
-	it('names all four, in the order the docstring names them', () => {
+	it('names all five, in the order the docstring names them', () => {
 		const the_answer = ask_about(the_project);
 		deepStrictEqual(
 			the_answer.the_layers.map((a_layer) => a_layer.name),
-			['domain', 'store', 'llm', 'web'],
+			['domain', 'store', 'llm', 'web', 'repair'],
 			'the reader read the docstring in its own order, or answered from a different tree',
 		);
 	});
@@ -146,12 +146,42 @@ describe('what is on disk in each declared layer', () => {
 	const the_tree = () => what_is_on_disk(the_project, ask_about(the_project).the_layers);
 
 	it('says a declared layer that is not there is absent, and not a layer holding nothing', () => {
-		const the_web = the_tree().find((a_layer) => a_layer.name === 'web');
-		ok(the_web, 'a layer the docstring declares is missing from the answer, so the reader dropped it');
+		const the_repair = the_tree().find((a_layer) => a_layer.name === 'repair');
+		ok(the_repair, 'a layer the docstring declares is missing from the answer, so the reader dropped it');
 		strictEqual(
-			the_web.is_a_directory,
+			the_repair.is_a_directory,
 			false,
-			'web/ is declared and absent, and an absent directory is not a directory holding no files',
+			'repair/ is declared and absent, and an absent directory is not a directory holding no files',
+		);
+		strictEqual(
+			the_repair.how_many_files,
+			null,
+			'an absent directory has no file count, and a count of zero would read as a layer that was emptied',
+		);
+	});
+
+	it('counts a subdirectory as no files at all, because the project has one', () => {
+		// **The fixture's `web/` holds a `ui/` and no code, and the project this page is
+		// about is in exactly that state.** A reader that counted directory entries rather
+		// than files reported a layer with a module in it, in the one column on the page that
+		// exists to keep a promise out of a code count.
+		const the_web = the_tree().find((a_layer) => a_layer.name === 'web');
+		strictEqual(the_web.is_a_directory, true, 'web/ is a directory here, unlike the fixture it replaced');
+		strictEqual(the_web.how_many_files, 0, 'web/ holds a subdirectory and no files');
+		strictEqual(the_web.how_many_modules, 0, 'web/ holds no code, and a subdirectory is not code');
+	});
+
+	it('tells a directory holding nothing from a directory that is not there', () => {
+		// **Both are "no code", and they are not the same fact.** `web/` is a directory
+		// somebody made and has not filled; `repair/` is a promise in a docstring. A page
+		// that rendered both as a zero would be reporting one absence twice and calling it a
+		// count, which is the shape every wrong number on a page has.
+		const the_layers = the_tree();
+		const the_web = the_layers.find((a_layer) => a_layer.name === 'web');
+		const the_repair = the_layers.find((a_layer) => a_layer.name === 'repair');
+		ok(
+			the_web.is_a_directory !== the_repair.is_a_directory,
+			'two ways of holding nothing are reported as the same thing, so the page cannot tell them apart',
 		);
 	});
 
@@ -174,7 +204,7 @@ describe('what is on disk in each declared layer', () => {
 	it('answers every layer the docstring declared, including the one with no directory', () => {
 		deepStrictEqual(
 			the_tree().map((a_layer) => a_layer.name),
-			['domain', 'store', 'llm', 'web'],
+			['domain', 'store', 'llm', 'web', 'repair'],
 			'the tree answer is not the declared list, so the two columns of the page cannot be lined up',
 		);
 	});
