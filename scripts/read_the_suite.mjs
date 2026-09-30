@@ -33,7 +33,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 /** A reader cannot run a suite it was not given a program for. */
 export class TheSuiteCannotBeRunError extends Error {
@@ -44,11 +44,30 @@ export class TheSuiteCannotBeRunError extends Error {
 }
 
 /** What to run it with: the checkout's own environment when it has one. */
-export function the_interpreter_to_run_it_with(inside, what_was_asked_for = null) {
+export function the_interpreter_to_run_the_suite_with(inside, what_was_asked_for = null) {
 	if (what_was_asked_for !== null) return what_was_asked_for;
-	const its_own = join(inside, '.venv', 'bin', 'python');
-	return existsSync(its_own) ? its_own : 'python3';
+	const its_own = the_own_environment_of(inside);
+	return its_own === null ? 'python3' : its_own;
 }
+
+/**
+ * A checkout's own interpreter, as a path from **this** directory rather than from its own.
+ *
+ * **A relative program path and a `cwd` do not compose**, and that is the whole of this
+ * function. `execFileSync('build/the-repository/.venv/bin/python', …, { cwd: 'build/the-repository' })`
+ * asks for `build/the-repository/build/the-repository/.venv/bin/python`, and the failure is
+ * `ENOENT` on a file that demonstrably exists. The suite reader had exactly this: it checked
+ * a relative path, found it, and then spawned the same relative string from inside the very
+ * directory it names — and the first published run of this page said only *"the suite could
+ * not be started"*, which is a true sentence and told nobody anything.
+ *
+ * A bare program name is left alone, because a name on `PATH` must **not** be resolved: a
+ * path to `python3` in one directory is a different program from the one first on the path.
+ */
+const the_own_environment_of = (inside) => {
+	const its_own = join(inside, '.venv', 'bin', 'python');
+	return existsSync(its_own) ? resolve(its_own) : null;
+};
 
 /** The three things a suite can be, and the two it is most often confused with. */
 export function a_suite_that_was_not_run(what_was_asked_for) {
@@ -89,7 +108,7 @@ export function read_the_suite(inside, { was_it_asked_for = null, how_to_run_it 
 	if (was_it_asked_for === null) {
 		return a_suite_that_was_not_run('--run-the-suite');
 	}
-	const the_interpreter = the_interpreter_to_run_it_with(inside, how_to_run_it);
+	const the_interpreter = the_interpreter_to_run_the_suite_with(inside, how_to_run_it);
 	// **The arguments, and not the command.** The interpreter is the program and putting it
 	// in the arguments as well makes Python try to open a file called `python3` — which is
 	// what the first version did, and it reported a red suite for a project whose suite

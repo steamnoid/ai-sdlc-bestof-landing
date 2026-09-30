@@ -19,7 +19,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 /** A reader that refused, with its own words rather than a summary. */
 export class ThePythonReaderRefusedError extends Error {
@@ -30,10 +30,18 @@ export class ThePythonReaderRefusedError extends Error {
 	}
 }
 
-/** The interpreter to read a project's own code with. */
+/**
+ * The interpreter to read a project's own code with, as a path from **this** directory.
+ *
+ * **Resolved, because a relative program path and a `cwd` do not compose.**
+ * `execFileSync('build/the-repository/.venv/bin/python', …, { cwd: 'build/the-repository' })`
+ * asks for the same directory twice, and the failure is `ENOENT` on a file that exists. A
+ * bare program name is left alone, because a name on `PATH` must **not** be resolved — a path
+ * to `python3` in one directory is a different program from the one first on the path.
+ */
 export function the_interpreter_to_read_the_code_with(inside) {
 	const its_own = join(inside, '.venv', 'bin', 'python');
-	return existsSync(its_own) ? its_own : 'python3';
+	return existsSync(its_own) ? resolve(its_own) : 'python3';
 }
 
 /**
