@@ -1,0 +1,29 @@
+{
+  "name": "ai-sdlc-bestof-landing",
+  "type": "module",
+  "version": "0.0.1",
+  "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "test": "node --test --test-concurrency=1 test/",
+    "test:collectors": "node --test --test-concurrency=1 test/the_code_is_what_the_page_says.test.mjs test/the_glossary_is_what_the_code_says.test.mjs test/the_page_cannot_say_what_the_repository_does_not_say.test.mjs test/what_the_page_says.test.mjs",
+    "test:page": "node --test --test-concurrency=1 test/the_page_says_only_what_the_state_says.test.mjs",
+    "collect": "node scripts/ask_the_repository.mjs --repository \"${AISDLC_REPOSITORY:-../ai-sdlc-bestof}\" --run-the-suite --github-api \"${GITHUB_API:-https://api.github.com}\"",
+    "collect:published": "node scripts/check_out_the_project.mjs && uv sync --all-groups --project build/the-repository && node scripts/ask_the_repository.mjs --repository build/the-repository --ref \"${AISDLC_BRANCH:-main}\" --run-the-suite --github-api \"${GITHUB_API:-https://api.github.com}\"",
+    "gate": "./scripts/gate"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.3.2",
+    "tailwindcss": "^4.3.3"
+  },
+  "allowScripts": {
+    "esbuild": true
+  }
+}

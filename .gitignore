@@ -1,0 +1,22 @@
+# The state the page is built from is never committed.
+#
+# A committed snapshot is a number nobody checked. The first deployment of the page about
+# `ai-sdlc-os` published last month's test count for exactly this reason — the file was
+# there to be used, every step of the build reported success, and the page was a month
+# stale with nothing red anywhere to say so.
+#
+# `npm run collect` writes it. The build copies it next to the page. Nothing tracks it.
+src/state/
+
+# A checkout the collector made, and the environment the project's own suite needs.
+build/
+node_modules/
+dist/
+.astro/
+
+# Python's, because the collectors import the project and run its suite.
+__pycache__/
+*.pyc
+.pytest_cache/
+
+.DS_Store
