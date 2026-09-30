@@ -1,19 +1,602 @@
 ---
+/**
+ * The page, and not one number in it.
+ *
+ * **Every fact here is decided in `src/page/` and read out of `src/state/the_bestof.json`.**
+ * A stage name, a role, a count and a verdict are all forbidden in this file, and
+ * `test/the_page_says_only_what_the_state_says.test.mjs` builds this page, reads it as a
+ * reader reads it, and uses the state to ask whether any sentence could have been typed.
+ * The only literals below are the pitch, the section headings and the claims about why the
+ * work matters — and no test in another repository could refute a sentence about why,
+ * which is exactly why those are allowed to be typed.
+ *
+ * Three things a page about a project mid-build gets wrong, and where each is decided:
+ *
+ * | it looks like | which is not | decided in |
+ * |---|---|---|
+ * | green | a suite that printed a lot of passes | `what_the_suite_says` |
+ * | a layer | a directory somebody made | `what_the_layers_say` |
+ * | a rule held by a file | a rule held by lint | `what_the_rules_say` |
+ */
 import the_state from '../state/the_bestof.json';
-const the_layers = the_state.the_layers;
+import {
+	what_the_layers_say,
+	what_the_rest_says,
+	what_the_rules_say,
+	what_the_suite_says,
+} from '../page/what_the_page_says.mjs';
+
+const the_layers = what_the_layers_say(the_state.the_layers);
+const the_suite = what_the_suite_says(the_state.the_suite);
+const the_rules = what_the_rules_say(the_state.the_rules);
+const the_rest = what_the_rest_says(the_state);
+const the_domain = the_state.the_domain;
+const the_glossary = the_state.the_glossary;
+const the_built = the_state.the_built_column;
+const the_claims = the_state.the_claims_about_the_stages;
+const the_order = the_state.the_order;
+const siteUrl = 'https://steamnoid.github.io/ai-sdlc-bestof-landing';
+
+const when_was_it_read = the_state.the_build?.read_at
+	? `${the_state.the_build.read_at.slice(0, 10)} ${the_state.the_build.read_at.slice(11, 16)} UTC`
+	: null;
+
+const the_verdict_colours = {
+	green: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+	amber: 'bg-amber-50 border-amber-200 text-amber-800',
+	zinc: 'bg-zinc-50 border-zinc-200 text-zinc-600',
+};
+const the_colour_of = (a_verdict, when_it_is_good) =>
+	when_it_is_good.includes(a_verdict) ? the_verdict_colours.green : the_verdict_colours.amber;
+
+const a_yes_or_a_no = (a_boolean) => (a_boolean ? 'yes' : 'no');
 ---
+
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<title>ai-sdlc-bestof</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="generator" content={Astro.generator} />
+		<title>ai-sdlc-bestof — a page that reads the project, not about it</title>
+		<meta
+			name="description"
+			content="A landing page for a project that lives somewhere else. Every fact on it is read out of that project by a program that runs in the build."
+		/>
+		<meta name="author" content="Krzysztof Paliga" />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content={siteUrl} />
+		<meta property="og:title" content="ai-sdlc-bestof" />
+		<meta
+			property="og:description"
+			content="Every fact on this page is read out of the project by a program that runs in the build."
+		/>
+		<link rel="icon" href={`${import.meta.env.BASE_URL}/favicon.svg`} />
 		<style>
 			@import 'tailwindcss';
 		</style>
 	</head>
-	<body class="bg-[#fafaf9] text-zinc-900">
+
+	<body class="bg-[#fafaf9] text-zinc-900 antialiased selection:bg-zinc-900 selection:text-white">
+		<header
+			class="sticky top-0 z-50 border-b border-zinc-200 bg-white/85 backdrop-blur"
+		>
+			<div class="mx-auto flex h-14 max-w-6xl items-center gap-3 px-6">
+				<span
+					class="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-900 text-[10px] font-bold tracking-widest text-[#fafaf9]"
+					>BE</span
+				>
+				<span class="text-[14px] font-semibold tracking-tight">ai-sdlc-bestof</span>
+				<nav class="ml-auto hidden gap-1 sm:flex">
+					{
+						[
+							['#layers', 'Layers'],
+							['#machine', 'Domain'],
+							['#glossary', 'Glossary'],
+							['#claims', 'Claims'],
+							['#suite', 'Suite'],
+							['#truth', 'Truth'],
+						].map(([the_anchor, the_label]) => (
+							<a
+								href={the_anchor}
+								class="rounded-full px-3 py-1 text-[12px] font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+							>
+								{the_label}
+							</a>
+						))
+					}
+				</nav>
+				<a
+					href={the_state.the_project.address}
+					class="ml-auto rounded-full bg-zinc-900 px-3 py-1 text-[11px] font-medium text-white sm:ml-0"
+					>The project</a
+				>
+			</div>
+		</header>
+
 		<main>
-			<h1>ai-sdlc-bestof</h1>
-			<p>A project that shows its working.</p>
+			<!-- The hero carries the three numbers a reader came for, and the time the page
+			     read the project beside them — because a commit from six hours ago looks
+			     exactly like one from six minutes ago. -->
+			<section class="mx-auto max-w-6xl px-6 pt-14 pb-10 md:pt-20 md:pb-14">
+				<div class="flex flex-wrap items-center gap-2">
+					<span
+						class={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${the_colour_of(
+							the_suite.verdict,
+							['green'],
+						)}`}
+						>suite: {the_suite.verdict}</span
+					>
+					<span
+						class={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${the_verdict_colours.zinc}`}
+						>read {when_was_it_read ?? 'never'}</span
+					>
+				</div>
+
+				<h1 class="mt-5 max-w-3xl text-4xl leading-[1.05] font-semibold tracking-tight md:text-5xl">
+					A project that shows its working,
+					<span class="text-zinc-500">on a page that checks its own.</span>
+				</h1>
+
+				<p class="mt-5 max-w-3xl text-[17px] leading-relaxed text-zinc-600">
+					An AI-native software lifecycle. Nine approval gates, a board, and a rule
+					that nothing an agent says can put a ticket into a stage nobody declared.
+					Everything below is read out of
+					<a href={the_state.the_project.address} class="font-mono text-zinc-900 underline decoration-zinc-300"
+						>{the_state.the_project.name}</a
+					> by a program that runs in the build — imported, counted, and run.
+				</p>
+
+				<dl class="mt-8 grid gap-3 sm:grid-cols-4">
+					<div class="rounded-xl border border-zinc-200 bg-white p-5">
+						<dt class="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">Layers with code</dt>
+						<dd class="mt-2 text-2xl font-semibold tabular-nums">{the_layers.how_many_hold_code}</dd>
+						<dd class="mt-1 text-[12px] text-zinc-500">of {the_layers.how_many_were_declared} declared</dd>
+					</div>
+					<div class="rounded-xl border border-zinc-200 bg-white p-5">
+						<dt class="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">Modules</dt>
+						<dd class="mt-2 text-2xl font-semibold tabular-nums">{the_layers.how_many_modules}</dd>
+						<dd class="mt-1 text-[12px] text-zinc-500">held in the project</dd>
+					</div>
+					<div class="rounded-xl border border-zinc-200 bg-white p-5">
+						<dt class="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">Suite</dt>
+						<dd class="mt-2 text-2xl font-semibold tabular-nums">
+							{the_suite.verdict === 'not run' ? '—' : the_suite.passed}
+						</dd>
+						<dd class="mt-1 text-[12px] text-zinc-500">{the_suite.verdict === 'not run' ? 'not run' : 'passed'}</dd>
+					</div>
+					<div class="rounded-xl border border-zinc-200 bg-white p-5">
+						<dt class="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">Refusals claimed</dt>
+						<dd class="mt-2 text-2xl font-semibold tabular-nums">{the_built.the_refused_claims.length}</dd>
+						<dd class="mt-1 text-[12px] text-zinc-500">the tree disagrees with</dd>
+					</div>
+				</dl>
+
+				<p class="mt-5 max-w-3xl text-[13px] leading-relaxed text-zinc-500">
+					{the_layers.detail}
+				</p>
+			</section>
+
+			<!-- Three columns, and the page does not merge them. A layer declared in a
+			     docstring, a directory on disk, and modules in the project are three
+			     questions, and the project this page is about has a layer that is all three
+			     things at once. -->
+			<section id="layers" class="scroll-mt-14 border-y border-zinc-200 bg-white py-12 md:py-16">
+				<div class="mx-auto max-w-6xl px-6">
+					<h2 class="text-2xl font-semibold tracking-tight">Declared, on disk, and held</h2>
+					<p class="mt-2 max-w-3xl text-[14px] leading-relaxed text-zinc-600">
+						The package's docstring names its own layers. A program walks the tree and asks git
+						what the project actually holds. The three answers are printed side by side
+						because the difference between them is the project's own thesis: it was learned
+						from four repositories that shipped code nothing imported.
+					</p>
+
+					<div class="mt-6 overflow-hidden rounded-2xl border border-zinc-200">
+						<table class="w-full text-left text-[13px]">
+							<thead class="bg-zinc-50 text-[11px] tracking-wider text-zinc-500 uppercase">
+								<tr>
+									<th class="px-4 py-2.5 font-medium">Layer</th>
+									<th class="px-4 py-2.5 font-medium">What it says it holds</th>
+									<th class="px-4 py-2.5 font-medium">On disk</th>
+									<th class="px-4 py-2.5 font-medium">In the project</th>
+									<th class="px-4 py-2.5 font-medium">Verdict</th>
+								</tr>
+							</thead>
+							<tbody class="divide-y divide-zinc-100">
+								{
+									the_layers.the_rows.map((a_row) => (
+										<tr>
+											<td class="px-4 py-2.5 font-mono text-[12px]">{a_row.name}</td>
+											<td class="px-4 py-2.5 text-zinc-600">{a_row.what_it_holds}</td>
+											<td class="px-4 py-2.5">
+												{the_state.the_layers.on_disk.find((l) => l.name === a_row.name).is_a_directory
+													? 'a directory'
+													: 'nothing'}
+											</td>
+											<td class="px-4 py-2.5 tabular-nums">
+												{a_row.how_many_modules === null ? '—' : `${a_row.how_many_modules} modules`}
+											</td>
+											<td class="px-4 py-2.5">
+												<span
+													class={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+														a_row.verdict === 'holds code'
+															? the_verdict_colours.green
+															: a_row.verdict === 'declared and not there'
+																? the_verdict_colours.zinc
+																: the_verdict_colours.amber
+													}`}
+												>
+													{a_row.verdict}
+												</span>
+											</td>
+										</tr>
+									))
+								}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</section>
+
+			<!-- The domain, imported rather than transcribed. A page that read a document
+			     about the code would list a role the project has since deleted, which is what
+			     happened to the hand-written page this one replaced. -->
+			<section id="machine" class="scroll-mt-14 py-12 md:py-16">
+				<div class="mx-auto max-w-6xl px-6">
+					<h2 class="text-2xl font-semibold tracking-tight">The domain, imported</h2>
+					<p class="mt-2 max-w-3xl text-[14px] leading-relaxed text-zinc-600">
+						{the_domain.stages.length} stages, {the_domain.roles.length} roles, and a table of
+						legal moves that is exhaustive in both directions. Which stage an agent must be
+						holding is read by <span class="font-mono text-zinc-900">{the_domain.how_the_project_says_who_must_hold_a_stage}</span>,
+						and the page says which convention answered so the column can be checked.
+					</p>
+
+					<div class="mt-6 grid gap-6 lg:grid-cols-2">
+						<div class="rounded-2xl border border-zinc-200 bg-white p-5">
+							<h3 class="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">Stages</h3>
+							<ul class="mt-3 space-y-1.5">
+								{
+									the_domain.stages.map((a_stage) => (
+										<li class="flex items-baseline justify-between gap-3 text-[13px]">
+											<span class="font-mono text-[12px]">{a_stage.name}</span>
+											<span class="text-[12px] text-zinc-500">
+												{a_stage.an_agent_must_be_holding_it ? 'an agent holds it' : 'no agent'}
+											</span>
+										</li>
+									))
+								}
+							</ul>
+							<h3 class="mt-5 text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
+								Roles
+							</h3>
+							<div class="mt-2 flex flex-wrap gap-1.5">
+								{
+									the_domain.roles.map((a_role) => (
+										<span class="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[11px]">
+											{a_role}
+										</span>
+									))
+								}
+							</div>
+						</div>
+
+						<div class="rounded-2xl border border-zinc-200 bg-white p-5">
+							<h3 class="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
+								Where a legal move goes — {the_domain.the_name_the_move_table_goes_by}
+							</h3>
+							<ul class="mt-3 space-y-1.5 text-[13px]">
+								{
+									the_domain.moves.map((a_row) => (
+										<li class="flex items-baseline gap-2">
+											<span class="font-mono text-[12px] text-zinc-500">{a_row.from}</span>
+											<span class="text-zinc-400">→</span>
+											{a_row.to.length === 0 ? (
+												<span class="text-[12px] text-amber-700">nowhere — this one is the end</span>
+											) : (
+												<span class="font-mono text-[12px]">{a_row.to.join(', ')}</span>
+											)}
+										</li>
+									))
+								}
+							</ul>
+							<div
+								class={`mt-4 rounded-lg border px-3 py-2 text-[12px] ${the_verdict_colours.zinc}`}
+							>
+								<strong class="font-medium">Gates:</strong>
+								{the_domain.why_the_gates_could_not_be_read ?? 'the router’s own mapping'}
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- The glossary, and the rules it states about being read. A glossary is a
+			     contract: a cell in a column headed as a prohibition holds a word that is not
+			     a name, and a reader that took every code span in the file blessed every
+			     banned noun in it. -->
+			<section id="glossary" class="scroll-mt-14 border-y border-zinc-200 bg-white py-12 md:py-16">
+				<div class="mx-auto max-w-6xl px-6">
+					<h2 class="text-2xl font-semibold tracking-tight">The glossary, and how it says to read it</h2>
+					<p class="mt-2 max-w-3xl text-[14px] leading-relaxed text-zinc-600">
+						{the_rest.the_glossary_says.detail}
+					</p>
+
+					<div class="mt-6 grid gap-6 lg:grid-cols-2">
+						<div class="rounded-2xl border border-zinc-200 p-5">
+							<h3 class="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
+								How the file says it is read
+							</h3>
+							<ul class="mt-3 space-y-2 text-[13px]">
+								{
+									the_glossary.how_the_file_says_it_is_read.map((a_rule) => (
+										<li>
+											<span class="font-mono text-[12px]">{a_rule.where}</span>
+											<span class="text-zinc-500"> — {a_rule.what_it_does}</span>
+										</li>
+									))
+								}
+							</ul>
+						</div>
+
+						<div class="rounded-2xl border border-zinc-200 p-5">
+							<h3 class="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
+								The artifacts a run reaches
+							</h3>
+							<ul class="mt-3 space-y-1.5 text-[13px]">
+								{
+									the_glossary.the_artifacts.map((an_artifact) => (
+										<li class="flex items-baseline justify-between gap-3">
+											<span class="font-mono text-[12px]">{an_artifact.name}</span>
+											<span class="font-mono text-[11px] text-zinc-500">
+												{an_artifact.produced_by}
+											</span>
+										</li>
+									))
+								}
+							</ul>
+						</div>
+					</div>
+
+					<!-- The settings a deployment states. Every one of them is refused rather than
+					     defaulted when it holds something the system cannot read, and "absent" and
+					     "empty" are two different facts — which is why the page prints the setting's
+					     own words for what it is *not*. -->
+					<div class="mt-6 rounded-2xl border border-zinc-200 p-5">
+						<h3 class="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
+							The settings a deployment states
+						</h3>
+						<div class="mt-3 overflow-x-auto">
+							<table class="w-full text-left text-[13px]">
+								<thead class="text-[11px] tracking-wider text-zinc-500 uppercase">
+									<tr>
+										<th class="py-1.5 pr-4 font-medium">Setting</th>
+										<th class="py-1.5 pr-4 font-medium">What it states</th>
+										<th class="py-1.5 font-medium">What it is not</th>
+									</tr>
+								</thead>
+								<tbody class="divide-y divide-zinc-100">
+									{
+										the_glossary.the_settings.map((a_setting) => (
+											<tr>
+												<td class="py-2 pr-4 font-mono text-[12px] whitespace-nowrap">{a_setting.name}</td>
+												<td class="py-2 pr-4 text-zinc-600">{a_setting.what_it_states}</td>
+												<td class="py-2 text-zinc-500">{a_setting.what_it_is_not}</td>
+											</tr>
+										))
+									}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Three claims, three checks. This is the section a project cannot write about
+			     itself, and it is the one that would be a lie if a verdict were merged. -->
+			<section id="claims" class="scroll-mt-14 py-12 md:py-16">
+				<div class="mx-auto max-w-6xl px-6">
+					<h2 class="text-2xl font-semibold tracking-tight">Three claims, checked against the tree</h2>
+					<p class="mt-2 max-w-3xl text-[14px] leading-relaxed text-zinc-600">
+						The project publishes what it holds itself to, and it checks that in a suite
+						somebody has to install and run. A page is the reader that shares none of its
+						assumptions. The check is <strong class="font-medium text-zinc-900">weaker</strong>
+						than the project's own — a declaration is not a raise — and the page says so
+						rather than claiming the stronger check by silence.
+					</p>
+
+					<div class="mt-6 grid gap-3 md:grid-cols-3">
+						<div class={`rounded-2xl border p-5 ${the_colour_of(the_built.verdict, ['every claim holds'])}`}>
+							<h3 class="text-[11px] font-medium tracking-wider uppercase">The Built column</h3>
+							<p class="mt-2 text-[13px] font-medium">{the_built.verdict}</p>
+							<p class="mt-1 text-[12px] leading-relaxed opacity-90">{the_built.detail}</p>
+						</div>
+						<div class={`rounded-2xl border p-5 ${the_colour_of(the_claims.verdict, ['they name the same stages'])}`}>
+							<h3 class="text-[11px] font-medium tracking-wider uppercase">The stage names</h3>
+							<p class="mt-2 text-[13px] font-medium">{the_claims.verdict}</p>
+							<p class="mt-1 text-[12px] leading-relaxed opacity-90">{the_claims.detail}</p>
+						</div>
+						<div class={`rounded-2xl border p-5 ${the_colour_of(the_order.verdict, ['the same order'])}`}>
+							<h3 class="text-[11px] font-medium tracking-wider uppercase">Their order</h3>
+							<p class="mt-2 text-[13px] font-medium">{the_order.verdict}</p>
+							<p class="mt-1 text-[12px] leading-relaxed opacity-90">{the_order.detail}</p>
+						</div>
+					</div>
+
+					<div class="mt-4 grid gap-6 lg:grid-cols-2">
+						<div class="rounded-2xl border border-zinc-200 bg-white p-5">
+							<h3 class="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
+								What each published refusal says, and what the tree found
+							</h3>
+							<ul class="mt-3 space-y-1.5 text-[13px]">
+								{
+									the_glossary.the_refusals.map((a_refusal) => (
+										<li class="flex items-baseline justify-between gap-3">
+											<span class="font-mono text-[12px]">{a_refusal.name}</span>
+											<span
+												class={`rounded-full border px-2 py-0.5 text-[11px] ${
+													a_refusal.is_built
+														? the_verdict_colours.green
+														: the_verdict_colours.zinc
+												}`}
+											>
+												{a_refusal.is_built ? 'built' : 'a promise'}
+											</span>
+										</li>
+									))
+								}
+							</ul>
+							<p class="mt-4 border-t border-zinc-100 pt-3 text-[11px] leading-relaxed text-zinc-500">
+								Checked by: {the_built.how_it_was_checked}
+							</p>
+						</div>
+
+						<div class="rounded-2xl border border-zinc-200 bg-white p-5">
+							<h3 class="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
+								The rules, and what holds each one
+							</h3>
+							<p class="mt-2 text-[12px] leading-relaxed text-zinc-600">{the_rules.detail}</p>
+							<ul class="mt-3 space-y-1.5 text-[13px]">
+								{
+									the_rules.the_rules.map((a_rule) => (
+										<li class="flex items-baseline justify-between gap-3">
+											<span class="text-zinc-700">{a_rule.rule}</span>
+											<span
+												class={`shrink-0 rounded-full border px-2 py-0.5 font-mono text-[11px] ${
+													a_rule.is_there === false
+														? the_verdict_colours.amber
+														: a_rule.is_there === null
+															? the_verdict_colours.zinc
+															: the_verdict_colours.green
+												}`}
+											>
+												{a_rule.is_there === false
+													? 'held by nothing'
+													: a_rule.is_there === null
+														? 'a tool'
+														: a_rule.the_file_holding_it}
+											</span>
+										</li>
+									))
+								}
+							</ul>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- The suite, byte for byte, with the exit code as the claim. -->
+			<section id="suite" class="scroll-mt-14 border-y border-zinc-200 bg-white py-12 md:py-16">
+				<div class="mx-auto max-w-6xl px-6">
+					<h2 class="text-2xl font-semibold tracking-tight">The suite, exactly as it printed</h2>
+					<p class="mt-2 max-w-3xl text-[14px] leading-relaxed text-zinc-600">
+						{the_suite.detail}
+					</p>
+
+					{
+						the_suite.what_it_printed === null ? (
+							<p class="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-[13px] text-zinc-500">
+								Nothing was printed, because nothing was run. That is a third thing and not a
+								failed suite, and the page says which flag would run it.
+							</p>
+						) : (
+							<div class="mt-6 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
+								<div class="flex items-center gap-2 border-b border-zinc-800 px-4 py-2.5">
+									<span class="h-2.5 w-2.5 rounded-full bg-red-400" />
+									<span class="h-2.5 w-2.5 rounded-full bg-yellow-400" />
+									<span class="h-2.5 w-2.5 rounded-full bg-green-400" />
+									<span class="ml-2 font-mono text-[12px] text-zinc-400">
+										{the_state.the_project.read_with} -m pytest -q
+									</span>
+									<span
+										class={`ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium ${
+											the_suite.verdict === 'green'
+												? 'bg-emerald-500/20 text-emerald-300'
+												: the_suite.verdict === 'not green'
+													? 'bg-amber-500/20 text-amber-300'
+													: 'bg-zinc-700 text-zinc-300'
+										}`}
+									>
+										{the_suite.verdict === 'not run'
+											? 'never ran'
+											: `exited ${the_state.the_suite.exit_code}`}
+									</span>
+								</div>
+								<pre class="overflow-x-auto px-4 py-3 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-zinc-300"><code>{the_suite.what_it_printed.trimEnd()}</code></pre>
+							</div>
+						)
+					}
+				</div>
+			</section>
+
+			<!-- How the page avoids lying, and the state a reader can check it against. -->
+			<section id="truth" class="scroll-mt-14 py-12 md:py-16">
+				<div class="mx-auto max-w-6xl px-6">
+					<h2 class="text-2xl font-semibold tracking-tight">How this page avoids lying</h2>
+
+					<div class="mt-6 grid gap-3 md:grid-cols-2">
+						<div class="rounded-2xl border border-zinc-200 bg-white p-5">
+							<h3 class="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
+								Facts are read, not typed
+							</h3>
+							<p class="mt-2 text-[13px] leading-relaxed text-zinc-600">
+								The domain is imported from the project's own objects. The suite is run in the
+								build and printed byte for byte. The glossary is read by the rules it states
+								about itself. The stage table comes out of the enumeration, in its own order.
+							</p>
+						</div>
+						<div class="rounded-2xl border border-zinc-200 bg-white p-5">
+							<h3 class="text-[11px] font-medium tracking-wider text-zinc-500 uppercase">
+								Absences are printed as absences
+							</h3>
+							<p class="mt-2 text-[13px] leading-relaxed text-zinc-600">
+								{the_rest.the_ci_says.detail} {the_rest.the_licence_says.detail}
+							</p>
+						</div>
+					</div>
+
+					<div class="mt-3 rounded-2xl bg-zinc-900 p-6 text-zinc-50">
+						<h3 class="text-[11px] font-medium tracking-wider text-zinc-400 uppercase">
+							What it was read from
+						</h3>
+						<dl class="mt-3 grid gap-3 text-[12px] sm:grid-cols-2">
+							<div>
+								<dt class="text-zinc-400">Which code answered</dt>
+								<dd class="mt-0.5 font-mono break-all text-zinc-100">
+									{the_state.the_project.which_code_answered}
+								</dd>
+							</div>
+							<div>
+								<dt class="text-zinc-400">Read at</dt>
+								<dd class="mt-0.5 text-zinc-100">{when_was_it_read ?? 'never'}</dd>
+							</div>
+							<div>
+								<dt class="text-zinc-400">The state this page was built from</dt>
+								<dd class="mt-0.5 font-mono text-zinc-100">the_bestof.json, published beside this page</dd>
+							</div>
+							<div>
+								<dt class="text-zinc-400">Its dependency policy</dt>
+								<dd class="mt-0.5 text-zinc-100">{the_rest.the_stack_says.detail}</dd>
+							</div>
+						</dl>
+						<p class="mt-4 text-[11px] leading-relaxed text-zinc-400">
+							{the_rest.the_stack_says.what_the_project_says_about_them}
+						</p>
+					</div>
+				</div>
+			</section>
 		</main>
+
+		<footer class="border-t border-zinc-200 py-8">
+			<div
+				class="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-6 text-[12px] text-zinc-500"
+			>
+				<span>© 2026 Krzysztof Paliga</span>
+				<span class="rounded-full border border-zinc-200 px-2 py-0.5">No tracking</span>
+				<span class="rounded-full border border-zinc-200 px-2 py-0.5">No cookies</span>
+				<span class="rounded-full border border-zinc-200 px-2 py-0.5">Nothing hand-typed</span>
+				<span class="ml-auto font-mono">
+					{the_state.the_project.name} · read at {the_state.the_project.read_with}
+				</span>
+			</div>
+		</footer>
 	</body>
 </html>
