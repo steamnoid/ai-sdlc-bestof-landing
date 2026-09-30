@@ -96,27 +96,129 @@ export class TheDocumentIsNotReadableError extends Error {
 
 /** The dependencies a manifest declares, and the prose each one sits under. */
 export function read_the_manifest(at) {
-	return { ...not_published('a `pyproject.toml`', join(at, 'pyproject.toml')), the_rules: [], the_dependencies: [], the_blocks: [] };
+	const where = join(at, 'pyproject.toml');
+	if (!existsSync(where)) return { ...not_published('a `pyproject.toml`', where), the_dependencies: [] };
+	const the_text = readFileSync(where, 'utf8');
+
+	const the_description = the_text.match(/^description\s*=\s*"([^"]+)"/m)?.[1] ?? null;
+	const the_python = the_text.match(/^requires-python\s*=\s*"([^"]+)"/m)?.[1] ?? null;
+	const the_entry_point = the_text.match(/^\w[\w-]*\s*=\s*"([\w.]+:[^"]+)"/m)?.[1] ?? null;
+
+	const the_markers_block = the_text.match(/markers\s*=\s*\[([^\]]*)\]/)?.[1] ?? '';
+	const the_markers = [...the_markers_block.matchAll(/"([^"]+)"/g)].map((a_match) => a_match[1].split(':')[0].trim());
+
+	return {
+		was_read: true,
+		where_it_was_read: where,
+		why_not: null,
+		description: the_description,
+		python: the_python,
+		entry_point: the_entry_point,
+		how_the_default_suite_is_kept_free:
+			the_text.match(/^addopts\s*=\s*"([^"]+)"/m)?.[1] ?? null,
+		the_markers,
+		// **The prose above the list, carried whole.** This is the project's own argument for
+		// each dependency and for the ones it deliberately does not have, and it is the one
+		// part of a manifest no other repository can supply.
+		what_it_says_about_its_dependencies: the_text
+			.split('\n')
+			.filter((a_line) => a_line.trim().startsWith('#'))
+			.map((a_line) => a_line.replace(/^#\s?/, ''))
+			.filter((a_line) => a_line !== '')
+			.join('\n')
+			.trim(),
+		// **Only inside the `dependencies` list.** A reader that scanned the whole file for a
+		// quoted string also finds the entry point, every pytest marker and every prose value
+		// — four things that are not dependencies, and a page reporting eight dependencies
+		// for a project that has two. The list is closed by a line that is only `]`, and not
+		// by the first `]` seen, because `"httpx[binary]>=0.27"` contains one.
+		the_dependencies: the_names_in_the_list_called(the_text, 'dependencies').map((a_name_and_rest) => {
+			const a_match = /^([a-zA-Z0-9_.-]+)([<>=!~ ]*)(.*)$/.exec(a_name_and_rest);
+			return {
+				name: a_match[1],
+				constraint: `${a_match[2]}${a_match[3]}`.trim() || null,
+			};
+		}),
+	};
 }
 
 /** The rules a project says it holds, the file holding each, and whether that file is there. */
 export function read_the_rules(at) {
-	return { ...not_published('an `AGENTS.md`', join(at, 'AGENTS.md')), the_rules: [], the_dependencies: [], the_blocks: [] };
+	const where = join(at, 'AGENTS.md');
+	if (!existsSync(where)) return { ...not_published('an `AGENTS.md`', where), the_rules: [] };
+	const the_rows = the_table_in(the_section_named(readFileSync(where, 'utf8'), 'The rules, and where each one is held') ?? []);
+
+	return {
+		was_read: true,
+		where_it_was_read: where,
+		why_not: null,
+		the_rules: the_rows.map((a_row) => {
+			// **A cell holding a bare word is a tool, and a tool is not a file.** `ruff` `D` and
+			// `pyproject.toml` `addopts` name a program and a setting, and asking whether
+			// `ruff` "exists" as a path answers a question nobody asked.
+			const the_holding = a_row[1] ?? '';
+			const the_file = the_code_spans_in(the_holding).find((a_span) => a_span.includes('/')) ?? null;
+			return {
+				rule: a_row[0] ?? null,
+				held_by: the_holding,
+				// **`null` for a tool and not `false`.** A rule held by lint is held; a rule
+				// held by a file that is missing is not. Those are three states and a boolean
+				// has two.
+				the_file_holding_it: the_file,
+				is_there: the_file === null ? null : existsSync(join(at, the_file)),
+			};
+		}),
+	};
 }
 
 /** What the continuous integration runs, by name. */
 export function read_the_workflows(at) {
-	return { ...not_published('a workflow', join(at, '.github', 'workflows')), the_workflows: [] };
+	const where = join(at, '.github', 'workflows');
+	if (!existsSync(where)) return { ...not_published('a workflow', where), the_workflows: [] };
+	return {
+		was_read: true,
+		where_it_was_looked_for: where,
+		why_not: null,
+		the_workflows: readdirSync(where)
+			.filter((a_name) => a_name.endsWith('.yml'))
+			.sort()
+			.map((a_name) => {
+				const the_text = readFileSync(join(where, a_name), 'utf8');
+				return {
+					file: `.github/workflows/${a_name}`,
+					name: the_text.match(/^name:\s*(.+)$/m)?.[1].trim() ?? null,
+					how_many_jobs: [...the_text.matchAll(/^ {2}\w[\w-]*:$/gm)].length,
+					the_steps: [...the_text.matchAll(/^\s+- name:\s*(.+)$/gm)].map((a_match) => a_match[1].trim()),
+				};
+			}),
+	};
 }
 
 /** The shell blocks a visitor may run, and the licence's own name. */
 export function read_what_a_visitor_may_run(at) {
-	return { ...not_published('a `README.md`', join(at, 'README.md')), the_rules: [], the_dependencies: [], the_blocks: [] };
+	const where = join(at, 'README.md');
+	if (!existsSync(where)) return { ...not_published('a `README.md`', where), the_blocks: [] };
+	return {
+		was_read: true,
+		where_it_was_read: where,
+		why_not: null,
+		the_blocks: [...readFileSync(where, 'utf8').matchAll(/```(\w+)\n([\s\S]*?)```/g)]
+			.filter((a_match) => a_match[1] === 'bash' || a_match[1] === 'sh')
+			.map((a_match) => a_match[2].trim().split('\n')),
+	};
 }
 
 export function read_the_licence(at) {
-	if (!existsSync(join(at, 'LICENSE'))) {
-		return { is_stated: false, name: null, where_it_was_looked_for: join(at, 'LICENSE') };
+	const where = join(at, 'LICENSE');
+	if (!existsSync(where)) {
+		return { is_stated: false, name: null, where_it_was_looked_for: where };
 	}
-	return { is_stated: true, name: null, where_it_was_looked_for: join(at, 'LICENSE') };
+	// **The file's own first line.** A licence is named by its own words, and a reader that
+	// recognised this one as permissive would be guessing — `All Rights Reserved` is a real
+	// licence file and the project this page is about has one.
+	return {
+		is_stated: true,
+		name: readFileSync(where, 'utf8').split('\n')[0].trim(),
+		where_it_was_looked_for: where,
+	};
 }
