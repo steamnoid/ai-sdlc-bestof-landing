@@ -111,7 +111,6 @@ src/state/the_bestof.json          the only bridge — a build artifact, never c
 
 ## Licence
 
-MIT for this repository. The project the page is about is under its own licence, and the page
-prints **that** file's first line rather than recognising it — `All Rights Reserved` is a
-real licence and a reader that recognised it as permissive would report a project as open
-source when it is not.
+All Rights Reserved. See [`LICENSE`](LICENSE). The project the page is about is under its own
+licence, and the page prints **that** file's first line rather than recognising it — a licence
+read as permissive would report a project as open source when it is not.
